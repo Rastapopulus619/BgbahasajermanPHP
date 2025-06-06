@@ -2,6 +2,8 @@ services:
   php-apache:
     build: .
     container_name: bgbj-php
+    volumes:
+      - ./html_dev:/var/www/html
     ports:
       - "8080:80"
     networks:
