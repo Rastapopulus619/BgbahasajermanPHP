@@ -1,0 +1,13 @@
+services:
+  php-apache:
+    build: .
+    container_name: bgbj-php
+    ports:
+      - "8080:80"
+    networks:
+      - mynet
+    restart: always
+
+networks:
+  mynet:
+    external: true

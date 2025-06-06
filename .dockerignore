@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+*.log
+*.bak
+node_modules/
+html_dev/
+html_dev_backup/
+.DS_Store
+__pycache__/
+*.swp
+*.swo

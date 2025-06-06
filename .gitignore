@@ -1,0 +1,24 @@
+# Ignore the production output folder
+/html/
+
+# Ignore Docker build cache or logs (if any)
+*.log
+*.tmp
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore temporary editor/IDE files
+*~
+*.swp
+
+# Ignore VSCode or JetBrains IDE folders (if used in future)
+.vscode/
+.idea/
+
+# Node.js artifacts (if used in the future)
+node_modules/
+
+# Backup files
+*.bak
