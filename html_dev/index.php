@@ -1,5 +1,5 @@
 <?php
-echo "<h1>Hello, World stupid SMART lol from PHP!</h1>";
+echo "<h1>Hello, World stupid SMART from PHP!</h1>";
 
 // Database config
 $host = 'mysql-container'; // Update this to match your container or Tailscale IP
