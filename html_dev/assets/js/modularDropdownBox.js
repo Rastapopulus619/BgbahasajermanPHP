@@ -23,13 +23,13 @@ export function setupDropdown(config) {
 
   const inputWrapper = input.parentElement; // reference to .input-wrapper
 
-  window.addEventListener('DOMContentLoaded', () => {
+  // window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       ready = true;
       input.disabled = false;
       if (searchStatus) searchStatus.textContent = '';
     }, 300);
-  });
+  // });
 
   input.addEventListener('focus', () => {
     if (!ready || input.value !== '') return;
