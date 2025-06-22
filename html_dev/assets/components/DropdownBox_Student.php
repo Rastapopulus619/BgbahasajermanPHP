@@ -1,5 +1,5 @@
 <?php
-$inputId = 'studentInputNew';
+$inputId = 'studentInput';
 $dropdownId = 'studentDropdown';
 $statusId = 'studentStatus';
 $errorId = 'studentError';

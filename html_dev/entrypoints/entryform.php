@@ -9,7 +9,7 @@ require_once '../config/db.php'; // database connection
   <title>Entry Form</title>
   <link rel="stylesheet" href="../assets/entryform.css">
   <link rel="stylesheet" href="../assets/dropdownbox.css"> <!-- NEW -->
-  <script src="../assets/dropdownbox.js" defer></script>
+  <!-- <script src="../assets/dropdownbox.js" defer></script> -->
 </head>
 <body>
 
@@ -19,8 +19,7 @@ require_once '../config/db.php'; // database connection
   <br>
   <h2>Select Student</h2>
 
-  <!-- 🔽 DropdownBox component (modularized) -->
-  <?php include '../assets/components/DropdownBox.php'; ?>
+
 
   <!-- Confirm Button -->
   <br>
@@ -29,40 +28,19 @@ require_once '../config/db.php'; // database connection
   <!-- Placeholder for dynamically inserted lesson card -->
   <div id="lessonCardContainer" style="margin-top: 40px;"></div>
 
-  <div class="dropdownbox-wrapper">
-  <label for="courseInput">Kurs auswählen</label>
-  <div class="input-wrapper">
-    <input type="text" id="courseInput" autocomplete="off" disabled placeholder="Gib den Kursnamen ein …" />
-    <div class="dropdown-button-area"></div> <!-- This is crucial -->
-  </div>
-  <div id="courseDropdown" class="dropdownbox-list hidden"></div>
-  <div class="status-line">
-    <span id="courseStatus" class="status"></span>
-    <span id="courseError" class="input-error"></span>
-  </div>
-  <button id="courseShowBtn" disabled>Kurs anzeigen</button>
-</div>
+
 
 <!-- 🔽 DropdownBox component (modularized) -->
-  <?php include '../assets/components/DropdownBox_Student.php'; ?>
+  <?php include '../assets/components/DropdownBox_Course.php'; ?>
 
   <!-- 🔽 DropdownBox component (modularized) -->
-  <?php include '../assets/components/DropdownBox_Student_Test.php'; ?>
+  <?php include '../assets/components/DropdownBox_Student.php'; ?>
   <!-- Card rendering logic -->
   <script>
     const input = document.getElementById('studentInput');
     const showCardBtn = document.getElementById('showCardBtn');
     const lessonCardContainer = document.getElementById('lessonCardContainer');
     const dropdown = document.getElementById('studentDropdown');
-
-    // Enable confirm button only if input has content
-    input.addEventListener('input', () => {
-      showCardBtn.disabled = (input.value.trim() === '');
-    });
-
-    dropdown.addEventListener('click', () => {
-      showCardBtn.disabled = (input.value.trim() === '');
-    });
 
     // Show placeholder card
     showCardBtn.addEventListener('click', () => {
@@ -94,17 +72,6 @@ require_once '../config/db.php'; // database connection
       fetchUrl: '../handlers/fetchStudentList.php',
       minChars: 1
     });
-
-    setupDropdown({
-      inputId: 'testStudentInput',
-      dropdownId: 'testStudentDropdown',
-      statusId: 'testStudentStatus',
-      errorId: 'testStudentError',
-      buttonId: 'testStudentShowBtn',
-      fetchUrl: '../handlers/fetchStudentList.php',
-      minChars: 1
-    });
-
 
     setupDropdown({
       inputId: 'courseInput',
