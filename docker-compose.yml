@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   php-apache:
     build: .
@@ -7,9 +9,10 @@ services:
     ports:
       - "8080:80"
     networks:
-      - mynet
+      - shared-net
     restart: always
 
 networks:
-  mynet:
-    external: true
+  shared-net:
+    external:
+      name: shared-net

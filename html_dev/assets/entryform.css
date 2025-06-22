@@ -1,0 +1,50 @@
+    #studentSelector {
+      position: relative;
+      display: inline-block;
+      max-width: 300px;
+    }
+    .dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      border: 1px solid #ccc;
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      z-index: 1000;
+      white-space: nowrap;
+      box-sizing: border-box;
+      min-width: 100%;
+    }
+    .dropdown.hidden {
+      display: none;
+    }
+    .dropdown-item {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .dropdown-item:hover,
+    .dropdown-item.selected {
+      background-color: #f0f0f0;
+    }
+    .input-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    .input-wrapper input {
+      padding-right: 30px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .input-wrapper::after {
+      content: '▼';
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      pointer-events: auto;
+      cursor: pointer;
+      color: gray;
+      font-size: 0.8em;
+    }

@@ -1,0 +1,94 @@
+/* === DROPDOWN BOX MODULE STYLING === */
+
+/* Wrapper to contain label + input + dropdown */
+.dropdownbox-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 300px;
+  width: 100%;
+}
+
+/* Input wrapper with ▼ triangle button */
+.input-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.input-wrapper input {
+  padding-right: 30px; /* space for ▼ button */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Clickable area for triangle button */
+.dropdown-button-area {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: gray;
+  font-size: 0.8em;
+  user-select: none;
+}
+
+.dropdown-button-area::before {
+  content: '▼';
+  pointer-events: none; /* 👈 This lets clicks pass through the triangle */
+}
+
+
+/* Dropdown list box */
+.dropdownbox-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+  z-index: 1000;
+  white-space: nowrap;
+  box-sizing: border-box;
+  min-width: 100%;
+}
+
+.dropdownbox-list.hidden {
+  display: none;
+}
+
+/* Dropdown item style */
+.dropdownbox-item {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.dropdownbox-item:hover,
+.dropdownbox-item.selected {
+  background-color: #f0f0f0;
+}
+
+/* Error and status messages */
+.input-error {
+  color: red;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+.status {
+  color: gray;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+
+.status-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+} 

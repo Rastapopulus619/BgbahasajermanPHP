@@ -1,0 +1,153 @@
+.cardWrapper {
+  padding: 10px;
+  box-sizing: border-box;
+  display: inline-block;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.cardBox {
+  width: 400px;
+  box-sizing: border-box;
+}
+
+.titleBox {
+  height: 35px;
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 4px solid black;
+  border-right: 4px solid black;
+  border-bottom: 2px solid black;
+  border-left: 4px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 24px;
+  font-family: 'Bayon';
+  letter-spacing: 2px;
+}
+
+.StudentDataBox {
+  box-sizing: border-box;
+  border: 3px solid black;
+  font-weight: bold;
+}
+
+.std_Table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.std_Table td {
+  font-size: 15px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-left: 3px;
+}
+
+.std_TableTitle {
+  font-family: 'Urbanist';
+  font-size: 15px;
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.StudentTableTitleCell {
+  width: 20%;
+  text-align: left;
+}
+
+.std_TableDotsCells {
+  width: 5%;
+}
+
+.StudentTableDataCell {
+  font-family: 'Urbanist';
+  width: 25%;
+  text-align: left;
+}
+
+.separatorBox {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  border-left: 3px solid black;
+  border-right: 3px solid black;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  font-family: 'Urbanist';
+  letter-spacing: 1px;
+}
+
+.LesTambahanBox {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  border-left: 3px solid black;
+  border-right: 3px solid black;
+  border-bottom: 3px solid black;
+  font-family: 'Urbanist';
+  font-style: italic;
+  letter-spacing: 1px;
+  font-weight: bold;
+  padding-left: 10px;
+  font-size: 11px;
+}
+
+.container {
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.slotsTableTitle {
+  font-family: 'Bayon';
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 0;
+}
+
+.slotsTable {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  box-sizing: border-box;
+  border: 3px solid black;
+  text-align: center;
+  font-weight: bold;
+  justify-content: center;
+  align-items: center;
+}
+.slotsTable td[attended="yes"], td[attended="y"] {
+  background-image: url("http://bgbj-php:80/assets/signature.png"); /* replace with correct relative path */
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 33px auto;
+}
+
+.slotsTable td {
+  height: 40px;
+  width: 50%;
+  border: 3px solid black;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 17px;
+}
+
+td[diganti="no"]  .lesPengganti, td[diganti="n"] .lesPengganti {
+  display: none;
+}
+
+td[diganti="yes"] .lesPengganti, td[diganti="y"] .lesPengganti {
+  display: inline;
+}

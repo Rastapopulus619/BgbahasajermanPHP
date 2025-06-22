@@ -1,14 +1,13 @@
 FROM php:8.2-apache
 
-# Install mysqli extension to allow PHP to talk to MySQL
+# Install required PHP extensions
 RUN docker-php-ext-install mysqli
 
-# Optional: enable Apache mod_rewrite
+# Enable Apache mod_rewrite for clean URLs
 RUN a2enmod rewrite
 
-# Copy your PHP app into the container's web root
+# Copy only what's needed first to leverage layer caching
 COPY html/ /var/www/html/
 
-# Set correct permissions (optional but good practice)
+# Set proper file permissions
 RUN chown -R www-data:www-data /var/www/html
-
