@@ -21,8 +21,20 @@
   box-sizing: border-box;
 }
 
+.input-wrapper::after {
+  content: '▼';
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  cursor: pointer;
+  color: gray;
+  font-size: 0.8em;
+}
+
 /* Clickable area for triangle button */
-.dropdown-button-area {
+/*.dropdown-button-area {
   position: absolute;
   top: 0;
   right: 0;
@@ -35,13 +47,13 @@
   color: gray;
   font-size: 0.8em;
   user-select: none;
-}
-
+}*/
+/*
 .dropdown-button-area::before {
   content: '▼';
-  pointer-events: none; /* 👈 This lets clicks pass through the triangle */
+  pointer-events: auto; 
 }
-
+*/
 
 /* Dropdown list box */
 .dropdownbox-list {

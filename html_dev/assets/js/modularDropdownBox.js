@@ -21,6 +21,8 @@ export function setupDropdown(config) {
   let selectedIndex = -1;
   let currentItems = [];
 
+  const inputWrapper = input.parentElement; // reference to .input-wrapper
+
   window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       ready = true;
@@ -139,62 +141,63 @@ export function setupDropdown(config) {
     }
   });
 
-  // Triangle button click area behavior
-  const triangleBtn = input.parentElement.querySelector('.dropdown-button-area');
-  if (triangleBtn) {
-    triangleBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  // Use entire input-wrapper area for triangle click (including ::after)
+  if (inputWrapper) {
+    inputWrapper.addEventListener('click', (e) => {
+      if (e.target !== input) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      if (!ready) return;
+        if (!ready) return;
 
-      if (!dropdown.classList.contains('hidden')) {
-        dropdown.classList.add('hidden');
-        if (searchStatus) searchStatus.textContent = '';
-        return;
-      }
+        if (!dropdown.classList.contains('hidden')) {
+          dropdown.classList.add('hidden');
+          if (searchStatus) searchStatus.textContent = '';
+          return;
+        }
 
-      input.focus();
-      selectedIndex = -1;
-      currentItems = [];
-      if (searchStatus) searchStatus.textContent = "Loading full list...";
-      input.value = '';
+        input.focus();
+        selectedIndex = -1;
+        currentItems = [];
+        if (searchStatus) searchStatus.textContent = "Loading full list...";
+        input.value = '';
 
-      fetch(fetchUrl + '?term=')
-        .then(res => res.json())
-        .then(data => {
-          dropdown.innerHTML = '';
-          if (data.length === 0) {
-            const div = document.createElement('div');
-            div.className = 'dropdownbox-item';
-            div.textContent = 'No results.';
-            dropdown.appendChild(div);
+        fetch(fetchUrl + '?term=')
+          .then(res => res.json())
+          .then(data => {
+            dropdown.innerHTML = '';
+            if (data.length === 0) {
+              const div = document.createElement('div');
+              div.className = 'dropdownbox-item';
+              div.textContent = 'No results.';
+              dropdown.appendChild(div);
+              dropdown.classList.remove('hidden');
+              if (searchStatus) searchStatus.textContent = '';
+              return;
+            }
+
+            data.forEach((name) => {
+              const div = document.createElement('div');
+              div.className = 'dropdownbox-item';
+              div.textContent = name;
+              div.onclick = () => {
+                input.value = name;
+                dropdown.classList.add('hidden');
+                if (searchStatus) searchStatus.textContent = '';
+                if (showCardBtn) showCardBtn.disabled = false;
+              };
+              dropdown.appendChild(div);
+              currentItems.push(div);
+            });
+
             dropdown.classList.remove('hidden');
             if (searchStatus) searchStatus.textContent = '';
-            return;
-          }
-
-          data.forEach((name) => {
-            const div = document.createElement('div');
-            div.className = 'dropdownbox-item';
-            div.textContent = name;
-            div.onclick = () => {
-              input.value = name;
-              dropdown.classList.add('hidden');
-              if (searchStatus) searchStatus.textContent = '';
-              if (showCardBtn) showCardBtn.disabled = false;
-            };
-            dropdown.appendChild(div);
-            currentItems.push(div);
+          })
+          .catch(err => {
+            console.error(err);
+            if (searchStatus) searchStatus.textContent = "Error loading list.";
           });
-
-          dropdown.classList.remove('hidden');
-          if (searchStatus) searchStatus.textContent = '';
-        })
-        .catch(err => {
-          console.error(err);
-          if (searchStatus) searchStatus.textContent = "Error loading list.";
-        });
+      }
     });
   }
 }

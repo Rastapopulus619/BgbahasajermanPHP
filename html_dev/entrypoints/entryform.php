@@ -43,7 +43,11 @@ require_once '../config/db.php'; // database connection
   <button id="courseShowBtn" disabled>Kurs anzeigen</button>
 </div>
 
+<!-- 🔽 DropdownBox component (modularized) -->
+  <?php include '../assets/components/DropdownBox_Student.php'; ?>
 
+  <!-- 🔽 DropdownBox component (modularized) -->
+  <?php include '../assets/components/DropdownBox_Student_Test.php'; ?>
   <!-- Card rendering logic -->
   <script>
     const input = document.getElementById('studentInput');
@@ -80,6 +84,27 @@ require_once '../config/db.php'; // database connection
   </script>
   <script type="module">
     import { setupDropdown } from '/assets/js/modularDropdownBox.js';
+
+    setupDropdown({
+      inputId: 'studentInput',
+      dropdownId: 'studentDropdown',
+      statusId: 'studentStatus',
+      errorId: 'studentError',
+      buttonId: 'studentShowBtn',
+      fetchUrl: '../handlers/fetchStudentList.php',
+      minChars: 1
+    });
+
+    setupDropdown({
+      inputId: 'testStudentInput',
+      dropdownId: 'testStudentDropdown',
+      statusId: 'testStudentStatus',
+      errorId: 'testStudentError',
+      buttonId: 'testStudentShowBtn',
+      fetchUrl: '../handlers/fetchStudentList.php',
+      minChars: 1
+    });
+
 
     setupDropdown({
       inputId: 'courseInput',
