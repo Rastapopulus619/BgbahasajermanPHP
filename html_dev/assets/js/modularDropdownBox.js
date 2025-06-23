@@ -1,11 +1,9 @@
-// assets/js/modularDropdownBox.js
 export function setupDropdown(config) {
   const {
     inputId,
     dropdownId,
     statusId,
     errorId,
-    buttonId,
     fetchUrl,
     validPattern = /^[a-zA-ZÀ-ſ0-9.\- ]*$/,
     minChars = 0
@@ -15,21 +13,19 @@ export function setupDropdown(config) {
   const dropdown = document.getElementById(dropdownId);
   const searchStatus = document.getElementById(statusId);
   const inputError = document.getElementById(errorId);
-  const showCardBtn = buttonId ? document.getElementById(buttonId) : null;
 
   let ready = false;
   let selectedIndex = -1;
   let currentItems = [];
+  let lastFetchedNames = []; // Store the last fetched results
 
-  const inputWrapper = input.parentElement; // reference to .input-wrapper
+  const inputWrapper = input.parentElement;
 
-  // window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      ready = true;
-      input.disabled = false;
-      if (searchStatus) searchStatus.textContent = '';
-    }, 300);
-  // });
+  setTimeout(() => {
+    ready = true;
+    input.disabled = false;
+    if (searchStatus) searchStatus.textContent = '';
+  }, 300);
 
   input.addEventListener('focus', () => {
     if (!ready || input.value !== '') return;
@@ -43,17 +39,17 @@ export function setupDropdown(config) {
     if (term.length < minChars) {
       dropdown.innerHTML = '';
       dropdown.classList.add('hidden');
-      if (inputError) inputError.textContent = '';
+      input.classList.remove('input-invalid');
       if (searchStatus) searchStatus.textContent = '';
       return;
     }
 
     if (!validPattern.test(term)) {
-      if (inputError) inputError.textContent = "Only letters, numbers, umlauts, '.', '-' and spaces are allowed.";
+      input.classList.add('input-invalid');
       dropdown.classList.add('hidden');
       return;
     } else {
-      if (inputError) inputError.textContent = '';
+      input.classList.remove('input-invalid');
     }
 
     if (searchStatus) searchStatus.textContent = "Searching...";
@@ -61,6 +57,8 @@ export function setupDropdown(config) {
     fetch(fetchUrl + '?term=' + encodeURIComponent(term))
       .then(res => res.json())
       .then(data => {
+        lastFetchedNames = data; // Save latest names
+
         dropdown.innerHTML = '';
         selectedIndex = -1;
         currentItems = [];
@@ -86,7 +84,8 @@ export function setupDropdown(config) {
             input.value = name;
             dropdown.classList.add('hidden');
             if (searchStatus) searchStatus.textContent = '';
-            if (showCardBtn) showCardBtn.disabled = false;
+            input.classList.remove('input-invalid');
+            triggerConfirmedInput(input.value);
           };
           dropdown.appendChild(div);
           currentItems.push(div);
@@ -99,19 +98,15 @@ export function setupDropdown(config) {
         console.error(err);
         if (searchStatus) searchStatus.textContent = "Error fetching list.";
       });
-
-    if (showCardBtn) showCardBtn.disabled = (term.trim() === '');
   });
 
   input.addEventListener('keydown', (e) => {
-    if (dropdown.classList.contains('hidden')) {
-      if (e.key === 'ArrowDown') {
-        input.dispatchEvent(new Event('input'));
-        return;
-      }
+    if (dropdown.classList.contains('hidden') && e.key === 'ArrowDown') {
+      input.dispatchEvent(new Event('input'));
+      return;
     }
 
-    if (currentItems.length === 0) return;
+    if (currentItems.length === 0 && e.key !== 'Enter') return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -121,16 +116,26 @@ export function setupDropdown(config) {
       if (selectedIndex > 0) selectedIndex--;
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedIndex >= 0) currentItems[selectedIndex].click();
+      if (selectedIndex >= 0) {
+        currentItems[selectedIndex].click();
+      } else {
+        const entered = input.value.trim();
+        const lowerEntered = entered.toLowerCase();
+        const valid = lastFetchedNames.some(name => name.toLowerCase() === lowerEntered);
+
+        if (valid) {
+          dropdown.classList.add('hidden');
+          input.classList.remove('input-invalid');
+          triggerConfirmedInput(entered);
+        } else {
+          input.classList.add('input-invalid');
+        }
+      }
     }
 
     currentItems.forEach((item, index) => {
-      if (index === selectedIndex) {
-        item.classList.add('selected');
-        item.scrollIntoView({ block: 'nearest' });
-      } else {
-        item.classList.remove('selected');
-      }
+      item.classList.toggle('selected', index === selectedIndex);
+      if (index === selectedIndex) item.scrollIntoView({ block: 'nearest' });
     });
   });
 
@@ -141,7 +146,6 @@ export function setupDropdown(config) {
     }
   });
 
-  // Use entire input-wrapper area for triangle click (including ::after)
   if (inputWrapper) {
     inputWrapper.addEventListener('click', (e) => {
       if (e.target !== input) {
@@ -165,6 +169,8 @@ export function setupDropdown(config) {
         fetch(fetchUrl + '?term=')
           .then(res => res.json())
           .then(data => {
+            lastFetchedNames = data;
+
             dropdown.innerHTML = '';
             if (data.length === 0) {
               const div = document.createElement('div');
@@ -184,7 +190,8 @@ export function setupDropdown(config) {
                 input.value = name;
                 dropdown.classList.add('hidden');
                 if (searchStatus) searchStatus.textContent = '';
-                if (showCardBtn) showCardBtn.disabled = false;
+                input.classList.remove('input-invalid');
+                triggerConfirmedInput(input.value);
               };
               dropdown.appendChild(div);
               currentItems.push(div);
@@ -199,5 +206,10 @@ export function setupDropdown(config) {
           });
       }
     });
+  }
+
+  function triggerConfirmedInput(value) {
+    console.log('Confirmed input:', value);
+    // TODO: Replace with logic to fetch DB data and populate labels
   }
 }

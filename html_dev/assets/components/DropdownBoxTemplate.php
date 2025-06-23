@@ -14,5 +14,5 @@
     <span id="<?= $statusId ?>" class="status"></span>
     <span id="<?= $errorId ?>" class="input-error"></span>
   </div>
-  <button id="<?= $buttonId ?>" disabled><?= $buttonLabel ?></button>
+  <div id="<?= $buttonId ?>" style="display:none;"></div>
 </div>

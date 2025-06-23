@@ -54,6 +54,9 @@
   pointer-events: auto; 
 }
 */
+.input-invalid {
+  border: 2px solid red !important;
+}
 
 /* Dropdown list box */
 .dropdownbox-list {
