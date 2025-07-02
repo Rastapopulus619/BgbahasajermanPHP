@@ -41,11 +41,21 @@ if ($result && $row = $result->fetch_assoc()) {
   
   <br><br>
   <!-- Generated template text area and Copy button -->
-  <label for="templateText"><strong>Generated Text:</strong></label><br>
-  <textarea id="templateText" rows="6" cols="60" placeholder="Template text will appear here..."></textarea>
-  <br>
-  <button id="copyBtn">Copy to Clipboard</button>
-  
+  <div style="display: flex; gap: 30px; align-items: flex-start;">
+    <!-- Left side: template output -->
+    <div style="flex: 1;">
+      <label for="templateText"><strong>Generated Text:</strong></label><br>
+      <textarea id="templateText" rows="6" cols="60" placeholder="Template text will appear here..."></textarea>
+      <br>
+      <button id="copyBtn">Copy to Clipboard</button>
+    </div>
+      <!-- Right side: manual input fields -->
+    <div id="manualInputs" style="min-width: 260px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
+      <strong>Manual Placeholder Overrides</strong>
+      <p style="font-size: 0.9em; margin-top: 5px; color: #777;">(Fields appear based on selected template)</p>
+    </div>
+  </div>
+
   <!-- Script to handle template generation and clipboard copying -->
   <script type="module">
     import { setupDropdown } from '/assets/js/modularDropdownBox.js';
@@ -57,7 +67,14 @@ if ($result && $row = $result->fetch_assoc()) {
       errorId: 'studentError',
       buttonId: 'studentShowBtn',
       fetchUrl: '../handlers/fetchStudentList.php',
-      minChars: 1
+      minChars: 1,
+        onSelect: (selectedValue) => {
+      const nameField = document.getElementById('input_NAME');
+      if (nameField) {
+        nameField.value = selectedValue;
+      }
+      updateTemplateText();
+     } 
     });
   </script>
   <script>
@@ -71,7 +88,31 @@ if ($result && $row = $result->fetch_assoc()) {
     const templateSelect = document.getElementById('templateSelect');
     const textArea = document.getElementById('templateText');
     const studentInput = document.getElementById('studentInput');
-    
+    const manualInputsContainer = document.getElementById('manualInputs');
+
+    function generateInputFields(placeholders) {
+      // Clear old fields
+      manualInputsContainer.querySelectorAll('input, label.placeholder-label').forEach(el => el.remove());
+
+      placeholders.forEach(ph => {
+        const label = document.createElement('label');
+        label.textContent = ph;
+        label.className = 'placeholder-label';
+        label.style.display = 'block';
+        label.style.marginTop = '10px';
+        label.htmlFor = `input_${ph}`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `input_${ph}`;
+        input.placeholder = `Enter ${ph}...`;
+        input.style.width = '100%';
+        input.addEventListener('input', updateTemplateText);
+
+        manualInputsContainer.appendChild(label);
+        manualInputsContainer.appendChild(input);
+      });
+    }
     // Update the template text area whenever template or student selection changes
     function updateTemplateText() {
       const templateKey = templateSelect.value;
@@ -84,6 +125,7 @@ if ($result && $row = $result->fetch_assoc()) {
       const studentName = studentInput.value.trim();
       if (studentName !== "") {
         text = text.replace(/\[NAME\]/g, studentName);
+        
         // (Optional) If template includes [NUMBER], fetch student details via AJAX
         if (text.includes('[NUMBER]')) {
           fetch(`../handlers/fetchStudentDetails.php?name=${encodeURIComponent(studentName)}`)

@@ -6,7 +6,9 @@ export function setupDropdown(config) {
     errorId,
     fetchUrl,
     validPattern = /^[a-zA-ZÀ-ſ0-9.\- ]*$/,
-    minChars = 0
+    minChars = 0,
+    onSelect = null
+
   } = config;
 
   const input = document.getElementById(inputId);
@@ -210,6 +212,9 @@ export function setupDropdown(config) {
 
   function triggerConfirmedInput(value) {
     console.log('Confirmed input:', value);
-    // TODO: Replace with logic to fetch DB data and populate labels
+    if (typeof onSelect === 'function') {
+      onSelect(value);
+    }
   }
+
 }
