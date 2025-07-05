@@ -1,8 +1,21 @@
 <?php
 // templateManager.php - Manage WhatsApp Templates (add, edit, rename, delete, duplicate)
 
-require_once '../config/db.php';
-$templateDir = realpath(__DIR__ . '/../templates/');
+// Fix directory handling with better error reporting
+$templateDir = __DIR__ . '/../templates/';
+if (!is_dir($templateDir)) {
+    if (!mkdir($templateDir, 0777, true)) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Could not create templates directory']);
+        exit;
+    }
+}
+$templateDir = realpath($templateDir); // Now it will work since directory exists
+
+// Ensure directory is writable
+if (!is_writable($templateDir)) {
+    chmod($templateDir, 0777);
+}
 
 function listTemplates($dir) {
     $files = glob($dir . '/*.txt');
@@ -15,23 +28,36 @@ function listTemplates($dir) {
 
 // Handle AJAX actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    
     $action = $_POST['action'] ?? '';
     $name = trim($_POST['name'] ?? '');
     $content = $_POST['content'] ?? '';
     $newName = trim($_POST['newName'] ?? '');
     $response = ['success' => false];
 
-    if (!preg_match('/^[a-zA-Z0-9_\- ]+$/', $name)) {
+    // Skip name validation for 'list' action
+    if ($action !== 'list' && !preg_match('/^[a-zA-Z0-9_\- ]+$/', $name)) {
         $response['error'] = 'Invalid template name.';
         echo json_encode($response);
         exit;
     }
+    
     $file = $templateDir . '/' . $name . '.txt';
 
     switch ($action) {
         case 'save':
-            file_put_contents($file, $content);
-            $response['success'] = true;
+            // Add error handling for file writing
+            if (!is_writable($templateDir)) {
+                $response['error'] = 'Templates directory is not writable.';
+                break;
+            }
+            $result = @file_put_contents($file, $content);
+            if ($result === false) {
+                $response['error'] = 'Failed to save file. Check permissions.';
+            } else {
+                $response['success'] = true;
+            }
             break;
         case 'delete':
             if (file_exists($file)) unlink($file);
@@ -70,7 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response['templates'] = listTemplates($templateDir);
             break;
     }
-    header('Content-Type: application/json');
     echo json_encode($response);
     exit;
 }
@@ -96,6 +121,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <h1>Manage WhatsApp Templates</h1>
+  
+  <!-- Template selection with "Create New" option -->
+  <div style="margin-bottom: 20px;">
+    <?php 
+    $templateSelectId = 'templateManagerSelect';
+    $templateSelectLabel = 'Choose Template to Edit';
+    $includeNewOption = true;
+    $onChangeCallback = "'handleTemplateSelection'";
+    include '../assets/components/TemplateSelector.php'; 
+    ?>
+  </div>
+  
   <div class="flex-row">
     <div class="side-panel">
       <strong>Templates</strong>
@@ -108,8 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
     <div class="main-panel">
-      <label for="templateName"><strong>Template Name:</strong></label><br>
-      <input type="text" id="templateName" style="width: 60%;" disabled><br>
+      <label for="templateSelect"><strong>Template Name:</strong></label><br>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <select id="templateSelect" style="width: 50%;">
+          <option value="">-- Choose Template --</option>
+        </select>
+        <span style="color: #888;">or</span>
+        <input type="text" id="templateName" style="width: 45%;" placeholder="Type new template name..." disabled>
+      </div>
       <label for="templateContent"><strong>Template Content:</strong></label><br>
       <textarea id="templateContent" rows="8" placeholder="Template text..."></textarea><br>
       <button id="saveBtn" disabled>Save</button>
@@ -122,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     let selected = '';
     let templates = [];
     const templateList = document.getElementById('templateList');
+    const templateSelect = document.getElementById('templateSelect');
     const templateName = document.getElementById('templateName');
     const templateContent = document.getElementById('templateContent');
     const saveBtn = document.getElementById('saveBtn');
@@ -131,13 +175,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const duplicateBtn = document.getElementById('duplicateBtn');
     const statusMsg = document.getElementById('statusMsg');
 
+    // Handle template selection from the dropdown
+    function handleTemplateSelection(value) {
+      if (value === '__NEW__') {
+        addNewTemplate();
+      } else if (value) {
+        selectTemplate(value);
+      } else {
+        clearSelection();
+      }
+    }
+
+    function addNewTemplate() {
+      const base = 'new_template';
+      let name = base;
+      let i = 1;
+      while (templates.includes(name)) { name = base + i; i++; }
+      
+      // Clear dropdown and prepare for new template
+      templateSelect.value = '';
+      templateName.value = name;
+      templateContent.value = '';
+      templateName.disabled = false;
+      saveBtn.disabled = false;
+      renameBtn.disabled = true;
+      deleteBtn.disabled = true;
+      duplicateBtn.disabled = true;
+      selected = '';
+      statusMsg.textContent = '';
+      renderList();
+      
+      // Reset existing dropdown component if it exists
+      if (document.getElementById('templateManagerSelect')) {
+        document.getElementById('templateManagerSelect').value = '';
+      }
+    }
+
+    function clearSelection() {
+      selected = '';
+      templateName.value = '';
+      templateContent.value = '';
+      templateName.disabled = true;
+      saveBtn.disabled = true;
+      renameBtn.disabled = true;
+      deleteBtn.disabled = true;
+      duplicateBtn.disabled = true;
+      statusMsg.textContent = '';
+      renderList();
+    }
+
     function fetchTemplates() {
       fetch('templateManager.php', { method: 'POST', body: new URLSearchParams({action: 'list'}) })
         .then(r => r.json())
         .then(data => {
           templates = data.templates || [];
           renderList();
+          populateDropdown();
         });
+    }
+
+    function populateDropdown() {
+      // Clear existing options except the first one
+      templateSelect.innerHTML = '<option value="">-- Choose Template --</option>';
+      
+      // Add templates to dropdown
+      templates.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        templateSelect.appendChild(option);
+      });
     }
     function renderList() {
       templateList.innerHTML = '';
@@ -151,13 +258,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     function selectTemplate(name) {
       selected = name;
-      templateName.value = name;
+      templateSelect.value = name;
+      templateName.value = '';
       templateName.disabled = false;
       saveBtn.disabled = false;
       renameBtn.disabled = false;
       deleteBtn.disabled = false;
       duplicateBtn.disabled = false;
       statusMsg.textContent = '';
+      
+      // Load template content automatically
       fetch('templateManager.php', { method: 'POST', body: new URLSearchParams({action: 'load', name}) })
         .then(r => r.json())
         .then(data => {
@@ -166,19 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       renderList();
     }
     addBtn.onclick = () => {
-      const base = 'new_template';
-      let name = base;
-      let i = 1;
-      while (templates.includes(name)) { name = base + i; i++; }
-      templateName.value = name;
-      templateContent.value = '';
-      templateName.disabled = false;
-      saveBtn.disabled = false;
-      renameBtn.disabled = true;
-      deleteBtn.disabled = true;
-      duplicateBtn.disabled = true;
-      selected = name;
-      renderList();
+      addNewTemplate();
     };
     saveBtn.onclick = () => {
       const name = templateName.value.trim();
@@ -194,7 +292,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           if (data.success) {
             statusMsg.textContent = 'Saved!';
             statusMsg.style.color = 'green';
-            if (!templates.includes(name)) templates.push(name);
+            if (!templates.includes(name)) {
+              templates.push(name);
+              // Reload the dropdown to include the new template
+              populateDropdown();
+              if (window.templateManagerSelect_reload) {
+                window.templateManagerSelect_reload();
+              }
+            }
+            // Update dropdown selection and selected template
+            selected = name;
+            templateSelect.value = name;
             renderList();
           } else {
             statusMsg.textContent = data.error || 'Error.';
@@ -214,7 +322,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             statusMsg.style.color = 'green';
             templates = templates.map(n => n === oldName ? newName : n);
             selected = newName;
-            templateName.value = newName;
+            templateSelect.value = newName;
+            templateName.value = '';
+            populateDropdown();
             renderList();
           } else {
             statusMsg.textContent = data.error || 'Error.';
@@ -233,12 +343,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             statusMsg.style.color = 'green';
             templates = templates.filter(n => n !== selected);
             selected = '';
+            templateSelect.value = '';
             templateName.value = '';
             templateContent.value = '';
             saveBtn.disabled = true;
             renameBtn.disabled = true;
             deleteBtn.disabled = true;
             duplicateBtn.disabled = true;
+            // Reload the dropdown to remove the deleted template
+            populateDropdown();
+            if (window.templateManagerSelect_reload) {
+              window.templateManagerSelect_reload();
+            }
             renderList();
           } else {
             statusMsg.textContent = data.error || 'Error.';
@@ -255,6 +371,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             statusMsg.textContent = 'Duplicated!';
             statusMsg.style.color = 'green';
             templates.push(data.newName);
+            populateDropdown();
             renderList();
           } else {
             statusMsg.textContent = data.error || 'Error.';
@@ -262,6 +379,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
         });
     };
+
+    // Handle dropdown selection
+    templateSelect.addEventListener('change', function() {
+      const selectedTemplate = this.value;
+      if (selectedTemplate) {
+        selectTemplate(selectedTemplate);
+      } else {
+        // Clear everything when "-- Choose Template --" is selected
+        selected = '';
+        templateName.value = '';
+        templateContent.value = '';
+        templateName.disabled = false;
+        saveBtn.disabled = false;
+        renameBtn.disabled = true;
+        deleteBtn.disabled = true;
+        duplicateBtn.disabled = true;
+        statusMsg.textContent = '';
+        renderList();
+      }
+    });
+
+    // Handle manual input in the text field
+    templateName.addEventListener('input', function() {
+      const inputValue = this.value.trim();
+      if (inputValue && templates.includes(inputValue)) {
+        // If user typed an existing template name, load it
+        selectTemplate(inputValue);
+      } else {
+        // User is typing a new name
+        templateSelect.value = '';
+        selected = '';
+        saveBtn.disabled = false;
+        renameBtn.disabled = true;
+        deleteBtn.disabled = true;
+        duplicateBtn.disabled = true;
+        statusMsg.textContent = '';
+        renderList();
+      }
+    });
+
     fetchTemplates();
   </script>
 </body>
