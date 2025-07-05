@@ -111,44 +111,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .template-actions { margin-top: 10px; display: flex; gap: 10px; }
     .template-actions button { padding: 4px 10px; }
     #templateContent { width: 100%; min-height: 120px; margin-top: 10px; }
-    .flex-row { display: flex; gap: 40px; align-items: flex-start; }
-    .side-panel { flex: 0 0 auto; min-width: 200px; }
-    .main-panel { flex: 1 1 0; min-width: 0; }
+    .main-panel { max-width: 800px; margin: 0 auto; }
   </style>
 </head>
 <body>
   <h1>Manage WhatsApp Templates</h1>
   
-  
-  <div class="flex-row">
-    <div class="side-panel">
-      <div class="template-actions">
-        <button id="resetBtn">Reset</button>
-        <button id="duplicateBtn" disabled>Duplicate</button>
-        <button id="renameBtn" disabled>Rename</button>
-        <button id="deleteBtn" disabled>Delete</button>
-      </div>
+  <div class="main-panel">
+    <label for="templateManagerSelect"><strong>Template Name:</strong></label><br>
+    <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; max-width: 300px;">
+      <?php 
+      $templateSelectId = 'templateManagerSelect';
+      $templateSelectLabel = '';
+      $includeNewOption = false;
+      $onChangeCallback = "'handleTemplateSelection'";
+      include '../assets/components/TemplateSelector.php'; 
+      ?>
+      <input type="text" id="templateName" placeholder="Type new template name...">
     </div>
-    <div class="main-panel">
-      <label for="templateManagerSelect"><strong>Template Name:</strong></label><br>
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-        <div style="width: 50%;">
-          <?php 
-          $templateSelectId = 'templateManagerSelect';
-          $templateSelectLabel = '';
-          $includeNewOption = false;
-          $onChangeCallback = "'handleTemplateSelection'";
-          include '../assets/components/TemplateSelector.php'; 
-          ?>
-        </div>
-        <span style="color: #888;">or</span>
-        <input type="text" id="templateName" style="width: 45%;" placeholder="Type new template name...">
-      </div>
-      <label for="templateContent"><strong>Template Content:</strong></label><br>
-      <textarea id="templateContent" rows="8" placeholder="Template text..."></textarea><br>
-      <button id="saveBtn" style="padding: 4px 10px;">Save</button>
-      <span id="statusMsg" style="margin-left: 20px; color: green;"></span>
+    <label for="templateContent"><strong>Template Content:</strong></label><br>
+    <textarea id="templateContent" rows="8" placeholder="Template text..."></textarea><br>
+    <div class="template-actions">
+      <button id="saveBtn">Save</button>
+      <button id="resetBtn">Reset</button>
+      <button id="duplicateBtn" disabled>Duplicate</button>
+      <button id="renameBtn" disabled>Rename</button>
+      <button id="deleteBtn" disabled>Delete</button>
     </div>
+    <span id="statusMsg" style="margin-left: 20px; color: green;"></span>
   </div>
   <br>
   <a href="WATemplateCreator.php">&larr; Back to Template Creator</a>
