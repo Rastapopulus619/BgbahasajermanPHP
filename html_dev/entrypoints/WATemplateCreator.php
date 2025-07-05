@@ -25,14 +25,19 @@ if ($result && $row = $result->fetch_assoc()) {
 <body>
   <h1>WhatsApp Template Creator</h1>
   
-  <!-- Template selection combobox -->
-  <label for="templateSelect"><strong>Pilih Template:</strong></label>
-  <select id="templateSelect">
-    <option value="">-- Choose Template --</option>
-    <!-- <option value="reminders">Reminder Paket Habis</option>
-    <option value="thanks">Terima Kasih untuk Pembayaran</option>
-    <option value="pricelist">Pricelist A1</option> -->
-  </select>
+<!-- Template selection combobox and manage button -->
+<div style="display: flex; align-items: center; gap: 20px;">
+  <div>
+    <label for="templateSelect"><strong>Pilih Template:</strong></label>
+    <select id="templateSelect">
+      <option value="">-- Choose Template --</option>
+    </select>
+  </div>
+  <div>
+    <a href="templateManager.php" style="display: inline-block; padding: 7px 18px; background: #1976d2; color: #fff; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 1em; border: none; transition: background 0.2s;">Manage Templates</a>
+  </div>
+</div>
+<br><br>
   
   <br><br>
   <div id="student-picker-section">
@@ -43,19 +48,19 @@ if ($result && $row = $result->fetch_assoc()) {
 
   <br><br>
   <!-- Generated template text area and Copy button -->
-  <div style="display: flex; gap: 30px; align-items: flex-start;">
-    <!-- Left side: template output -->
-    <div style="flex: 1;">
-      <label for="templateText"><strong>Generated Text:</strong></label><br>
-      <textarea id="templateText" rows="6" cols="60" placeholder="Template text will appear here..."></textarea>
-      <br>
-      <button id="copyBtn">Copy to Clipboard</button>
-    </div>
+  <!-- After -->
+<div style="display: flex; gap: 30px; align-items: stretch; max-width: 1200px; width: 100%; margin: 40px 0; padding: 0; box-sizing: border-box;">
+      <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;">
+        <label for="templateText"><strong>Generated Text:</strong></label><br>
+        <textarea id="templateText" rows="6" style="width: 100%; flex: 1;" placeholder="Template text will appear here..."></textarea>
+        <br>
+        <button id="copyBtn">Copy to Clipboard</button>
+      </div>
       <!-- Right side: manual input fields -->
-    <div id="manualInputs" style="min-width: 260px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
-      <strong>Manual Placeholder Overrides</strong>
-      <p style="font-size: 0.9em; margin-top: 5px; color: #777;">(Fields appear based on selected template)</p>
-    </div>
+      <div id="manualInputs" style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #f9f9f9;">
+        <strong>Manual Placeholder Overrides</strong>
+        <p style="font-size: 0.9em; margin-top: 5px; color: #777;">(Fields appear based on selected template)</p>
+      </div>
   </div>
 
   <!-- Include the dropdown box script -->
