@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .template-actions { margin-top: 10px; display: flex; gap: 10px; }
     .template-actions button { padding: 4px 10px; }
     #templateContent { width: 100%; min-height: 120px; margin-top: 10px; }
-    .main-panel { max-width: 800px; margin: 0 auto; }
+    .main-panel { max-width: 800px; margin: 0; }
   </style>
 </head>
 <body>

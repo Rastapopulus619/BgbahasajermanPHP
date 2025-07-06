@@ -9,6 +9,8 @@ require_once '../config/db.php'; // database connection
   <title>Entry Form</title>
   <link rel="stylesheet" href="../assets/entryform.css">
   <link rel="stylesheet" href="../assets/dropdownbox.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
 </head>
 <body>
 
