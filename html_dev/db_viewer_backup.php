@@ -100,6 +100,9 @@ function getTableInfo($conn, $database) {
 }
 
 $selectedTable = $_GET['table'] ?? null;
+$page = $_GET['page'] ?? 1;
+$recordsPerPage = 25;
+$offset = ($page - 1) * $recordsPerPage;
 
 // Pass the database variable to the function
 $tables = getTableInfo($conn, $database);
@@ -109,9 +112,9 @@ $totalRecords = 0;
 if ($selectedTable && isset($tables[$selectedTable])) {
     $totalRecords = $tables[$selectedTable]['row_count'];
     
-    // Get ALL table data (no pagination - scrollable instead)
+    // Get table data with pagination
     try {
-        $dataQuery = "SELECT * FROM `$selectedTable`";
+        $dataQuery = "SELECT * FROM `$selectedTable` LIMIT $recordsPerPage OFFSET $offset";
         $dataResult = $conn->query($dataQuery);
         if ($dataResult) {
             while ($row = $dataResult->fetch_assoc()) {
@@ -119,10 +122,12 @@ if ($selectedTable && isset($tables[$selectedTable])) {
             }
         }
     } catch (Exception $e) {
-        // Handle any query errors
+        // Handle any pagination errors
         $tableData = [];
     }
 }
+
+$totalPages = ceil($totalRecords / $recordsPerPage);
 ?>
 
 <!DOCTYPE html>
@@ -134,234 +139,97 @@ if ($selectedTable && isset($tables[$selectedTable])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Custom styling to match main app color scheme */
-        body {
-            background-color: rgb(243, 208, 169); /* B1 background - warm orange */
-            font-family: sans-serif;
-        }
-        
-        .navbar-dark {
-            background-color: rgb(242, 133, 24) !important; /* B1 sections - darker orange */
-        }
-        
-        .container-fluid {
-            background-color: rgb(249, 180, 101); /* B1 card - medium orange */
-            border-radius: 12px;
-            margin: 20px auto;
-            padding: 20px;
-            max-width: 95%;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .nav-tabs {
-            border-bottom: 2px solid rgb(242, 133, 24);
-        }
-        
-        .nav-tabs .nav-link {
-            color: rgb(242, 133, 24);
-            border: 1px solid transparent;
-            font-weight: 500;
-        }
-        
-        .nav-tabs .nav-link:hover {
-            border-color: rgb(242, 133, 24);
-            color: rgb(180, 90, 15);
-        }
-        
-        .nav-tabs .nav-link.active {
-            background-color: rgb(242, 133, 24);
-            color: white;
-            border-color: rgb(242, 133, 24);
-        }
-        
         .schema-diagram {
-            background: rgb(252, 220, 185); /* Lighter orange */
-            border: 2px solid rgb(242, 133, 24);
-            border-radius: 12px;
-            padding: 25px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
             margin: 20px 0;
             min-height: 400px;
         }
-        
         .table-box {
             background: white;
-            border: 2px solid rgb(242, 133, 24);
+            border: 2px solid #007bff;
             border-radius: 8px;
             margin: 10px;
             padding: 10px;
             min-width: 250px;
             display: inline-block;
             vertical-align: top;
-            box-shadow: 0 3px 6px rgba(242, 133, 24, 0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
         .table-header {
-            background: rgb(242, 133, 24);
+            background: #007bff;
             color: white;
             padding: 8px;
             margin: -10px -10px 10px -10px;
             border-radius: 6px 6px 0 0;
             font-weight: bold;
         }
-        
         .column-list {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
         .column-item {
             padding: 3px 5px;
             border-bottom: 1px solid #eee;
             font-size: 0.9em;
         }
-        
         .column-item:last-child {
             border-bottom: none;
         }
-        
         .pk-column {
-            background: rgb(255, 245, 180); /* Light yellow for primary keys */
+            background: #fff3cd;
             font-weight: bold;
-            color: rgb(180, 90, 15);
         }
-        
         .fk-column {
-            background: rgb(220, 235, 255); /* Light blue for foreign keys */
-            color: rgb(0, 80, 160);
+            background: #d1ecf1;
+            color: #0c5460;
         }
-        
         .data-view {
             background: white;
-            border-radius: 12px;
-            padding: 25px;
+            border-radius: 8px;
+            padding: 20px;
             margin: 20px 0;
-            border: 2px solid rgb(242, 133, 24);
         }
-        
         .stats-card {
-            background: white;
-            border: 2px solid rgb(242, 133, 24);
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 15px;
             margin: 10px 0;
-            box-shadow: 0 2px 4px rgba(242, 133, 24, 0.15);
         }
-        
-        .stats-card h3 {
-            color: rgb(242, 133, 24);
-        }
-        
         .live-indicator {
             display: inline-block;
             width: 8px;
             height: 8px;
-            background-color: rgb(0, 213, 110); /* Green from A2 */
+            background-color: #28a745;
             border-radius: 50%;
             margin-right: 5px;
             animation: pulse 2s infinite;
         }
-        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
-        
         .table-container {
-            max-height: 600px; /* Increased from 500px */
+            max-height: 500px;
             overflow-y: auto;
-            border: 2px solid rgb(242, 133, 24);
-            border-radius: 8px;
-            background: white;
         }
-        
         .table th {
             position: sticky;
             top: 0;
-            background-color: rgb(242, 133, 24);
-            color: white;
+            background-color: #f8f9fa;
             z-index: 10;
-            border-color: rgb(220, 110, 20) !important;
         }
-        
-        .table-striped > tbody > tr:nth-of-type(odd) > td {
-            background-color: rgb(252, 245, 235); /* Very light orange stripes */
-        }
-        
-        .table-hover tbody tr:hover {
-            background-color: rgb(249, 230, 200); /* Light orange hover */
-        }
-        
-        .list-group-item.active {
-            background-color: rgb(242, 133, 24);
-            border-color: rgb(242, 133, 24);
-        }
-        
-        .list-group-item:hover {
-            background-color: rgb(252, 240, 220);
-        }
-        
-        .btn-outline-light:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .card {
-            border: 2px solid rgb(242, 133, 24);
-        }
-        
-        .card-header {
-            background-color: rgb(242, 133, 24);
-            color: white;
-            border-bottom: 2px solid rgb(220, 110, 20);
-        }
-        
         .error-notice {
-            background: rgb(255, 220, 220);
-            color: rgb(150, 50, 50);
-            border: 2px solid rgb(255, 180, 180);
-            padding: 15px;
-            border-radius: 8px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
             margin: 10px 0;
-        }
-        
-        .badge {
-            font-size: 0.75em;
-        }
-        
-        .text-primary {
-            color: rgb(242, 133, 24) !important;
-        }
-        
-        .text-info {
-            color: rgb(0, 80, 160) !important;
-        }
-        
-        .text-success {
-            color: rgb(0, 180, 90) !important;
-        }
-        
-        .text-warning {
-            color: rgb(200, 100, 0) !important;
-        }
-        
-        /* Scrollbar styling */
-        .table-container::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .table-container::-webkit-scrollbar-track {
-            background: rgb(252, 245, 235);
-            border-radius: 4px;
-        }
-        
-        .table-container::-webkit-scrollbar-thumb {
-            background: rgb(242, 133, 24);
-            border-radius: 4px;
-        }
-        
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: rgb(220, 110, 20);
         }
     </style>
 </head>
@@ -500,10 +368,35 @@ if ($selectedTable && isset($tables[$selectedTable])) {
                                     </h5>
                                 </div>
 
-                                <!-- Scrollable Table Data (No Pagination) -->
+                                <!-- Pagination -->
+                                <?php if ($totalPages > 1): ?>
+                                    <nav aria-label="Table pagination">
+                                        <ul class="pagination">
+                                            <?php if ($page > 1): ?>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?table=<?= urlencode($selectedTable) ?>&page=<?= $page - 1 ?>#data">Previous</a>
+                                                </li>
+                                            <?php endif; ?>
+                                            
+                                            <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
+                                                <li class="page-item <?= $i == $page ? 'active' : '' ?>">
+                                                    <a class="page-link" href="?table=<?= urlencode($selectedTable) ?>&page=<?= $i ?>#data"><?= $i ?></a>
+                                                </li>
+                                            <?php endfor; ?>
+                                            
+                                            <?php if ($page < $totalPages): ?>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?table=<?= urlencode($selectedTable) ?>&page=<?= $page + 1 ?>#data">Next</a>
+                                                </li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </nav>
+                                <?php endif; ?>
+
+                                <!-- Table Data -->
                                 <div class="table-container">
                                     <?php if (!empty($tables[$selectedTable]['columns'])): ?>
-                                        <table class="table table-striped table-hover table-sm mb-0">
+                                        <table class="table table-striped table-hover table-sm">
                                             <thead>
                                                 <tr>
                                                     <?php foreach ($tables[$selectedTable]['columns'] as $column): ?>
@@ -641,4 +534,4 @@ if ($selectedTable && isset($tables[$selectedTable])) {
         });
     </script>
 </body>
-</html>
+</html> 
