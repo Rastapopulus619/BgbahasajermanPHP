@@ -10,7 +10,44 @@ require_once '../config/db.php'; // database connection
   <link rel="stylesheet" href="../assets/entryform.css">
   <link rel="stylesheet" href="../assets/dropdownbox.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
+  <style>
+    .form-section {
+      margin: 15px 0;
+    }
+    
+    .form-section label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .form-section input, .form-section select {
+      width: 300px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    #addStudentBtn {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    #addStudentBtn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    
+    #addStudentBtn:hover:not(:disabled) {
+      background: #0056b3;
+    }
+  </style>
 </head>
 <body>
 
@@ -18,148 +55,266 @@ require_once '../config/db.php'; // database connection
   <p>This will be the new control center for real-time DB interaction.</p>
 
   <br>
-  <h2>Select Student</h2>
+  <h2>New Student</h2>
 
-  <!-- 🔽 Always-visible dropdowns -->
-  <?php include '../assets/components/DropdownBox_Course.php'; ?>
-  <?php include '../assets/components/DropdownBox_Student.php'; ?>
+    <!-- 🔽 New student entry form -->
+  <div class="form-section">
+    <label for="titleSelect">Title:</label>
+    <select id="titleSelect" name="title">
+      <option value="">Select Title...</option>
+      <option value="Herr">Herr</option>
+      <option value="Frau">Frau</option>
+      <option value="none">None</option>
+    </select>
+  </div>
 
+  <div class="form-section">
+    <label for="newStudentName">New Student Name:</label>
+    <input type="text" id="newStudentName" name="studentName" placeholder="Enter new student name...">
+    <div id="nameValidation" style="color: red; font-size: 0.9em; margin-top: 4px;"></div>
+  </div>
+
+  <div class="form-section">
+    <label for="levelSelect">Level:</label>
+    <select id="levelSelect" name="level">
+      <option value="">Select Level...</option>
+      <!-- Will be populated by JavaScript -->
+    </select>
+  </div>
+
+  <div class="form-section">
+    <button id="addStudentBtn" disabled>Add New Student</button>
+    <div id="insertStatus" style="margin-top: 10px; font-weight: bold;"></div>
+  </div>
   <br><br><br>
 
-  <!-- 🔄 Dynamic Label → AJAX Dropdown -->
-  <div id="dynamicFieldWrapper">
-    <label id="fieldLabel" style="cursor: pointer; text-decoration: underline; color: blue;">
-      Click me to select another student
-    </label>
-  </div>
+  <!-- New Student Entry JavaScript -->
+  <script>
+    // Global variables
+    let existingStudents = [];
+    let availableLevels = [];
+    
+    // Initialize the universal data fetcher
+    class DataFetcher {
+      async executeQuery(queryConfig) {
+        try {
+          console.log('Sending query:', queryConfig);
+          
+          const response = await fetch('../handlers/dataFetcher.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: queryConfig })
+          });
+          
+          console.log('Response status:', response.status);
+          console.log('Response headers:', response.headers);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          // Get the raw text first to debug
+          const rawText = await response.text();
+          console.log('Raw response:', rawText);
+          
+          // Try to parse JSON
+          let result;
+          try {
+            result = JSON.parse(rawText);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Raw response that failed to parse:', rawText);
+            throw new Error(`Server returned invalid JSON: ${parseError.message}`);
+          }
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Unknown error occurred');
+          }
+          
+          return result.data;
+        } catch (error) {
+          console.error('DataFetcher error:', error);
+          throw error;
+        }
+      }
+    }
+    const dataFetcher = new DataFetcher();
 
-  <!-- Slot where dropdown will appear -->
-  <div id="dynamicDropdownBox" style="display: none;"></div>
+    // Load existing students and levels when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Load existing student names
+        const studentResult = await dataFetcher.executeQuery({
+          type: 'simple',
+          sql: 'SELECT Name FROM students',
+          return_type: 'array'
+        });
+        
+        existingStudents = studentResult.map(row => row.Name.toLowerCase());
+        console.log('Loaded existing students:', existingStudents);
 
-  <!-- Hidden pre-rendered modular dropdown -->
-  <div id="templateTestDropdown" style="display: none;">
-    <?php
-      $inputId = 'testStudentInput';
-      $dropdownId = 'testStudentDropdown';
-      $statusId = 'testStudentStatus';
-      $errorId = 'testStudentError';
-      $buttonId = 'testStudentShowBtn';
-      $label = 'Student auswählen';
-      $placeholder = 'Gib den Namen ein …';
-      $buttonLabel = 'Paket anzeigen';
-      include '../assets/components/DropdownBoxTemplate.php';
-    ?>
-  </div>
+        // Load available levels
+        const levelResult = await dataFetcher.executeQuery({
+          type: 'simple',
+          sql: 'SELECT Level FROM levels',
+          return_type: 'array'
+        });
+        
+        availableLevels = levelResult;
+        populateLevelDropdown(availableLevels);
+        console.log('Loaded levels:', availableLevels);
 
-  <!-- JavaScript for setting up dropdowns -->
-  <script type="module">
-  import { setupDropdown } from '/assets/js/modularDropdownBox.js';
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        document.getElementById('insertStatus').innerHTML = '<span style="color: red;">Error loading initial data</span>';
+      }
+    });
 
-  // Setup original dropdowns
-  setupDropdown({
-    inputId: 'studentInput',
-    dropdownId: 'studentDropdown',
-    statusId: 'studentStatus',
-    errorId: 'studentError',
-    buttonId: 'studentShowBtn',
-    fetchUrl: '../handlers/fetchStudentList.php',
-    minChars: 1
-  });
-
-  setupDropdown({
-    inputId: 'courseInput',
-    dropdownId: 'courseDropdown',
-    statusId: 'courseStatus',
-    errorId: 'courseError',
-    buttonId: 'courseShowBtn',
-    fetchUrl: '../handlers/fetchLevelsList.php',
-    minChars: 1
-  });
-</script>
-<script type="module">
-  import { setupDropdown } from '/assets/js/modularDropdownBox.js';
-
-  const wrapper = document.getElementById('dynamicFieldWrapper');
-  const label = document.getElementById('fieldLabel');
-  const template = document.getElementById('templateTestDropdown');
-
-  label.addEventListener('click', () => {
-    // Generate unique ID suffix
-    const suffix = 'dyn' + Date.now();
-
-    // Clone template and show
-    const clone = template.cloneNode(true);
-    clone.style.display = 'block';
-    wrapper.innerHTML = '';
-    wrapper.appendChild(clone);
-
-    // Dynamically assign new IDs
-    const oldToNew = {
-      testStudentInput: `input_${suffix}`,
-      testStudentDropdown: `dropdown_${suffix}`,
-      testStudentStatus: `status_${suffix}`,
-      testStudentError: `error_${suffix}`,
-      testStudentShowBtn: `button_${suffix}`
-    };
-
-    for (const [oldId, newId] of Object.entries(oldToNew)) {
-      const el = clone.querySelector(`#${oldId}`);
-      if (el) el.id = newId;
+    // Populate level dropdown
+    function populateLevelDropdown(levels) {
+      const levelSelect = document.getElementById('levelSelect');
+      
+      levels.forEach(levelRow => {
+        const option = document.createElement('option');
+        option.value = levelRow.Level;
+        option.textContent = levelRow.Level;
+        levelSelect.appendChild(option);
+      });
     }
 
-    // ⚠️ Wait until DOM update completes
-      setTimeout(() => {
-        const input = document.getElementById(oldToNew.testStudentInput);
-        const dropdown = document.getElementById(oldToNew.testStudentDropdown);
-        const status = document.getElementById(oldToNew.testStudentStatus);
-        const error = document.getElementById(oldToNew.testStudentError);
-        const button = document.getElementById(oldToNew.testStudentShowBtn);
+    // Validate student name in real-time
+    document.getElementById('newStudentName').addEventListener('input', (e) => {
+      const name = e.target.value.trim();
+      const validation = document.getElementById('nameValidation');
+      
+      if (name === '') {
+        validation.textContent = '';
+        checkFormValidity();
+        return;
+      }
+      
+      if (existingStudents.includes(name.toLowerCase())) {
+        validation.textContent = 'Student already exists!';
+        validation.style.color = 'red';
+      } else {
+        validation.textContent = 'Student name available';
+        validation.style.color = 'green';
+      }
+      
+      checkFormValidity();
+    });
 
-        console.log('[DEBUG] Input found?', input);
-        console.log('[DEBUG] Dropdown found?', dropdown);
-        console.log('[DEBUG] Status found?', status);
-        console.log('[DEBUG] Error found?', error);
-        console.log('[DEBUG] Button found?', button);
+    // Check if all form fields are valid
+    function checkFormValidity() {
+      const name = document.getElementById('newStudentName').value.trim();
+      const title = document.getElementById('titleSelect').value;
+      const level = document.getElementById('levelSelect').value;
+      const button = document.getElementById('addStudentBtn');
+      
+      const nameValid = name !== '' && !existingStudents.includes(name.toLowerCase());
+      const titleValid = title !== '';
+      const levelValid = level !== '';
+      
+      button.disabled = !(nameValid && titleValid && levelValid);
+    }
 
-        if (input && dropdown && status && error && button) {
-          setupDropdown({
-            inputId: oldToNew.testStudentInput,
-            dropdownId: oldToNew.testStudentDropdown,
-            statusId: oldToNew.testStudentStatus,
-            errorId: oldToNew.testStudentError,
-            buttonId: oldToNew.testStudentShowBtn,
-            fetchUrl: '../handlers/fetchStudentList.php',
-            minChars: 1
-          });
+    // Add event listeners for form validation
+    document.getElementById('titleSelect').addEventListener('change', checkFormValidity);
+    document.getElementById('levelSelect').addEventListener('change', checkFormValidity);
 
-          button.addEventListener('click', () => {
-            const val = input?.value?.trim();
-            if (val) {
-              label.textContent = val;
-              wrapper.innerHTML = '';
-              wrapper.appendChild(label);
-            }
-          });
-        } else {
-          console.error('[ERROR] ❌ One or more dynamic elements not found, aborting setupDropdown');
-        }
-      }, 0);
+    // Handle new student insertion
+    document.getElementById('addStudentBtn').addEventListener('click', async () => {
+      const button = document.getElementById('addStudentBtn');
+      const status = document.getElementById('insertStatus');
+      
+      button.disabled = true;
+      status.innerHTML = '<span style="color: blue;">Adding student...</span>';
+      
+      try {
+        const name = document.getElementById('newStudentName').value.trim();
+        const title = document.getElementById('titleSelect').value;
+        const level = document.getElementById('levelSelect').value;
+        
+        // Step 1: Get next StudentNumber and StudentID
+        console.log('Getting next StudentNumber...');
+        const numberResult = await dataFetcher.executeQuery({
+          type: 'simple',
+          sql: 'SELECT MAX(StudentNumber)+1 as NextNumber FROM students',
+          return_type: 'single'
+        });
+        console.log('Number result:', numberResult);
+        
+        console.log('Getting next StudentID...');
+        const idResult = await dataFetcher.executeQuery({
+          type: 'simple',
+          sql: 'SELECT MAX(StudentID)+1 as NextID FROM students',
+          return_type: 'single'
+        });
+        console.log('ID result:', idResult);
+        
+        const studentNumber = numberResult.NextNumber || 1;
+        const studentID = idResult.NextID || 1;
+        
+        console.log('Final values - StudentNumber:', studentNumber, 'StudentID:', studentID);
+        console.log('Insertion values - Name:', name, 'Title:', title, 'TitleValue:', title === 'none' ? null : title);
+        
+        // Step 2: Insert new student
+        const titleValue = title === 'none' ? null : title;
+        
+        console.log('Attempting to insert student with params:', [studentID, studentNumber, name, titleValue]);
+        
+        const insertResult = await dataFetcher.executeQuery({
+          type: 'simple',
+          sql: 'INSERT INTO students (StudentID, StudentNumber, Name, Title) VALUES (?, ?, ?, ?)',
+          params: [studentID, studentNumber, name, titleValue]
+        });
+        
+        console.log('Insert result:', insertResult);
+        
+        status.innerHTML = '<span style="color: blue;">Student inserted, updating level...</span>';
+        
+        // Step 3: Wait briefly, then update level
+        setTimeout(async () => {
+          try {
+            await dataFetcher.executeQuery({
+              type: 'simple',
+              sql: 'UPDATE studydetails SET Level = ? WHERE StudentID = ?',
+              params: [level, studentID]
+            });
+            
+            // Success!
+            status.innerHTML = '<span style="color: green;">✅ Student successfully added!</span>';
+            
+            // Add to existing students list and clear form
+            existingStudents.push(name.toLowerCase());
+            clearForm();
+            
+            setTimeout(() => {
+              status.innerHTML = '';
+            }, 3000);
+            
+          } catch (error) {
+            console.error('Error updating level:', error);
+            status.innerHTML = '<span style="color: orange;">⚠️ Student added but level update failed</span>';
+          }
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error adding student:', error);
+        status.innerHTML = '<span style="color: red;">❌ Error adding student: ' + error.message + '</span>';
+        button.disabled = false;
+      }
+    });
 
-
-      // Confirm button click → label switch
-      const confirmBtn = document.getElementById(oldToNew.testStudentShowBtn);
-      confirmBtn?.addEventListener('click', () => {
-        const input = document.getElementById(oldToNew.testStudentInput);
-        const val = input?.value?.trim();
-        if (val) {
-          label.textContent = val;
-          wrapper.innerHTML = '';
-          wrapper.appendChild(label);
-        }
-      });
-    }, 0); // Let DOM update complete before wiring
-  
-</script>
+    // Clear the form
+    function clearForm() {
+      document.getElementById('newStudentName').value = '';
+      document.getElementById('titleSelect').value = '';
+      document.getElementById('levelSelect').value = '';
+      document.getElementById('nameValidation').textContent = '';
+      checkFormValidity();
+    }
+  </script>
 
 
 

@@ -147,7 +147,7 @@ $escapedName = htmlspecialchars($studentName);
 </head>
 <body>
   <div id="formWrapper">
-    <h1>Pembuatan Kartu Les Manual</h1>
+    <h1>Pembuatan Kartu Les TestVersion</h1>
 
     <!-- Redirect Button to WA Template Creator page -->
     <form action="/entrypoints/WATemplateCreator.php" method="get">
@@ -161,12 +161,10 @@ $escapedName = htmlspecialchars($studentName);
     <form action="/db_viewer.php" method="get">
       <button type="submit">🗄️ Database Viewer</button>
     </form>
-        <!-- Navigation to Test Version -->
-    <form action="index_test.php" method="get">
-      <button type="submit">📋 Test Version</button>
+        <!-- Navigation to Main Version -->
+    <form action="index.php" method="get">
+      <button type="submit">🏠 Main Version</button>
     </form>
-
-
 
     <div class="form-grid" id="studentDataInputs">
       <label for="name">Nama Siswa</label>

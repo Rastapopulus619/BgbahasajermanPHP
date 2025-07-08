@@ -108,6 +108,17 @@ class DataFetcher {
         }
         
         $stmt->execute();
+        
+        // For INSERT, UPDATE, DELETE queries, return success info instead of result set
+        if (stripos($sql, 'INSERT') === 0 || stripos($sql, 'UPDATE') === 0 || stripos($sql, 'DELETE') === 0) {
+            return [
+                'affected_rows' => $stmt->affected_rows,
+                'insert_id' => $this->conn->insert_id,
+                'success' => true
+            ];
+        }
+        
+        // For SELECT queries, return the result set
         $result = $stmt->get_result();
         
         if ($returnType === 'single') {
