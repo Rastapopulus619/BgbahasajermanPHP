@@ -1,9 +1,9 @@
 <?php
 // WATemplateCreator.php - WhatsApp Template Creator page
 
-require_once '../config/db.php';  // Connect to the database
+require_once '../config/db.php';  // Connect to the database:contentReference[oaicite:3]{index=3}
 
-// (Optional) Fetch a default student record for testing (reuse index.php query)
+// (Optional) Fetch a default student record for testing (reuse index.php query):contentReference[oaicite:4]{index=4}
 $defaultName = $defaultNumber = '';
 $sql = "SELECT * FROM students WHERE StudentID = 5";
 $result = $conn->query($sql);
@@ -43,7 +43,7 @@ if ($result && $row = $result->fetch_assoc()) {
   <div id="student-picker-section">
   <!-- Student picker dropdown (reuse existing component) -->
   <label for="studentInput"><strong>Pilih Siswa:</strong></label><br>
-  <?php include '../assets/components/DropdownBox_Student.php'; ?>  <!-- Student search box -->
+  <?php include '../assets/components/DropdownBox_Student.php'; ?>  <!-- Student search box:contentReference[oaicite:5]{index=5} -->
   </div>
 
   <br><br>
@@ -66,7 +66,7 @@ if ($result && $row = $result->fetch_assoc()) {
   <!-- Include the dropdown box script -->
   <script type="module">
     import { setupDropdown } from '/assets/js/modularDropdownBox.js';
-    // Initialize the student dropdown (fetch list as in entryform)
+    // Initialize the student dropdown (fetch list as in entryform):contentReference[oaicite:6]{index=6}
     setupDropdown({
       inputId: 'studentInput',
       dropdownId: 'studentDropdown',
@@ -99,54 +99,6 @@ if ($result && $row = $result->fetch_assoc()) {
         });
       } catch (err) {
         console.error("Error loading template list:", err);
-      }
-    }
-
-    // ==========================================
-    // UNIVERSAL DATA FETCHING SYSTEM
-    // ==========================================
-    
-    /**
-     * Fetch template-specific data using the new universal data fetcher
-     * 
-     * @param {string} templateKey - The template identifier
-     * @param {string} studentName - The selected student name
-     * @returns {Object} - Object with placeholder data
-     */
-    async function fetchTemplateData(templateKey, studentName) {
-      try {
-        const queryConfig = {
-          type: 'complex',
-          handler: 'getTemplateAutoFetchData',
-          params: {
-            template_key: templateKey,
-            student_name: studentName
-          }
-        };
-        
-        const response = await fetch('../handlers/dataFetcher.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: queryConfig })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Unknown error');
-        }
-        
-        return result.data || {};
-        
-      } catch (error) {
-        console.error('Universal data fetch failed:', error);
-        throw error;
       }
     }
 
@@ -236,34 +188,13 @@ if ($result && $row = $result->fetch_assoc()) {
           placeholders["NAME"] = studentName;
         }
 
-        // Use universal data fetcher for auto-filling all placeholders
-        if (studentName) {
-          try {
-            const autoFetchData = await fetchTemplateData(templateKey, studentName);
-            
-            // Apply auto-fetched data to placeholders
-            Object.keys(autoFetchData).forEach(key => {
-              const value = autoFetchData[key];
-              if (value && text.includes(`[${key}]`)) {
-                text = text.replaceAll(`[${key}]`, `[${value}]`);
-                placeholders[key] = value;
-              }
-            });
-          } catch (error) {
-            console.error("Error auto-fetching template data:", error);
-            // Fallback to old method for NUMBER only
-            if (text.includes("[NUMBER]")) {
-              try {
-                const detailRes = await fetch(`../handlers/fetchStudentDetails.php?name=${encodeURIComponent(studentName)}`);
-                const detail = await detailRes.json();
-                if (detail.StudentNumber) {
-                  text = text.replaceAll("[NUMBER]", `[${detail.StudentNumber}]`);
-                  placeholders["NUMBER"] = detail.StudentNumber;
-                }
-              } catch (fallbackError) {
-                console.error("Fallback fetch also failed:", fallbackError);
-              }
-            }
+        // If NUMBER is used, fetch from DB
+        if (text.includes("[NUMBER]")) {
+          const detailRes = await fetch(`../handlers/fetchStudentDetails.php?name=${encodeURIComponent(studentName)}`);
+          const detail = await detailRes.json();
+          if (detail.StudentNumber) {
+            text = text.replaceAll("[NUMBER]", `[${detail.StudentNumber}]`);
+            placeholders["NUMBER"] = detail.StudentNumber;
           }
         }
         

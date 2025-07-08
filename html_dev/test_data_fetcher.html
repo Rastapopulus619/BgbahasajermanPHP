@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Data Fetcher - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .error { background: #ffe6e6; color: #d00; }
+        .success { background: #e6ffe6; color: #080; }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #005a87; }
+        input, select {
+            padding: 5px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Universal Data Fetcher - Test Page</h1>
+    <p>This page tests the universal data fetching system implementation.</p>
+
+    <!-- Test 1: Simple Query -->
+    <div class="test-section">
+        <h3>Test 1: Simple Student List Query</h3>
+        <button onclick="testSimpleQuery()">Fetch All Students</button>
+        <div id="result1" class="result"></div>
+    </div>
+
+    <!-- Test 2: Template Auto-fetch -->
+    <div class="test-section">
+        <h3>Test 2: Template Auto-fetch</h3>
+        <label>Student Name:</label>
+        <input type="text" id="studentName" placeholder="Enter student name..." value="">
+        <label>Template:</label>
+        <select id="templateSelect">
+            <option value="student_reminder">Student Reminder</option>
+            <option value="payment_reminder">Payment Reminder</option>
+            <option value="schedule_update">Schedule Update</option>
+        </select>
+        <button onclick="testTemplateAutoFetch()">Test Template Auto-fetch</button>
+        <div id="result2" class="result"></div>
+    </div>
+
+    <!-- Test 3: Error Handling -->
+    <div class="test-section">
+        <h3>Test 3: Error Handling</h3>
+        <button onclick="testErrorHandling()">Test Invalid Query</button>
+        <div id="result3" class="result"></div>
+    </div>
+
+    <!-- Test 4: Legacy Compatibility -->
+    <div class="test-section">
+        <h3>Test 4: Legacy fetchStudentDetails.php</h3>
+        <label>Student Name:</label>
+        <input type="text" id="legacyStudentName" placeholder="Enter student name..." value="">
+        <button onclick="testLegacyFetch()">Test Legacy Fetch</button>
+        <div id="result4" class="result"></div>
+    </div>
+
+    <script src="../assets/js/dataFetcher.js"></script>
+    <script>
+        // Initialize the data fetcher
+        const dataFetcher = new DataFetcher({ debug: true });
+
+        async function testSimpleQuery() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.textContent = 'Loading...';
+            
+            try {
+                const result = await dataFetcher.executeQuery({
+                    type: 'simple',
+                    sql: 'SELECT Name, StudentNumber FROM students LIMIT 5',
+                    return_type: 'multiple'
+                });
+                
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = '<h4>Students Found:</h4>' + 
+                    result.map(student => `<li>${student.Name} (${student.StudentNumber})</li>`).join('');
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testTemplateAutoFetch() {
+            const resultDiv = document.getElementById('result2');
+            const studentName = document.getElementById('studentName').value.trim();
+            const templateKey = document.getElementById('templateSelect').value;
+            
+            if (!studentName) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Please enter a student name';
+                return;
+            }
+            
+            resultDiv.textContent = 'Loading template data...';
+            
+            try {
+                const result = await dataFetcher.executeQuery({
+                    type: 'template_auto_fetch',
+                    template: templateKey,
+                    context: {
+                        student_name: studentName
+                    }
+                });
+                
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = '<h4>Template Data:</h4>' + 
+                    Object.entries(result).map(([key, value]) => 
+                        `<strong>${key}:</strong> ${value || '(empty)'}`
+                    ).join('<br>');
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testErrorHandling() {
+            const resultDiv = document.getElementById('result3');
+            resultDiv.textContent = 'Testing error handling...';
+            
+            try {
+                const result = await dataFetcher.executeQuery({
+                    type: 'invalid_type',
+                    sql: 'INVALID SQL'
+                });
+                
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'ERROR: Should have thrown an error!';
+            } catch (error) {
+                resultDiv.className = 'result success';
+                resultDiv.textContent = 'Good: Error correctly caught: ' + error.message;
+            }
+        }
+
+        async function testLegacyFetch() {
+            const resultDiv = document.getElementById('result4');
+            const studentName = document.getElementById('legacyStudentName').value.trim();
+            
+            if (!studentName) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Please enter a student name';
+                return;
+            }
+            
+            resultDiv.textContent = 'Testing legacy fetch...';
+            
+            try {
+                const response = await fetch(`../handlers/fetchStudentDetails.php?name=${encodeURIComponent(studentName)}`);
+                const result = await response.json();
+                
+                if (result.error) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = 'Legacy Error: ' + result.error;
+                } else {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = '<h4>Legacy Student Data:</h4>' + 
+                        Object.entries(result).map(([key, value]) => 
+                            `<strong>${key}:</strong> ${value}`
+                        ).join('<br>');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Legacy fetch error: ' + error.message;
+            }
+        }
+
+        // Auto-populate with a test student name if available
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const students = await dataFetcher.executeQuery({
+                    type: 'simple',
+                    sql: 'SELECT Name FROM students LIMIT 1',
+                    return_type: 'single'
+                });
+                
+                if (students && students.Name) {
+                    document.getElementById('studentName').value = students.Name;
+                    document.getElementById('legacyStudentName').value = students.Name;
+                }
+            } catch (error) {
+                console.log('Could not auto-populate student name:', error.message);
+            }
+        });
+    </script>
+</body>
+</html>
