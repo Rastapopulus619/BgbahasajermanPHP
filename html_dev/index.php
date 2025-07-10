@@ -1,52 +1,4 @@
 <?php
-echo "<h1>Hello, World from new PHP!</h1>";
-
-// Database config
-$host = 'mysql-container'; // Or your actual MySQL hostname/IP
-$user = 'rasta';
-$password = 'Burungnuri1212';
-$database = 'bgbahasajerman';
-
-$conn = new mysqli($host, $user, $password, $database);
-
-// Check connection
-if ($conn->connect_error) {
-    die("<p style='color:red'>Connection failed: " . $conn->connect_error . "</p>");
-}
-
-// Query
-$sql = "SELECT * FROM students WHERE StudentID = 5";
-$result = $conn->query($sql);
-
-$studentName = '';
-$studentID = '';
-$studentNumber = '';
-$title = '';
-
-if ($result && $result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $studentID = $row['StudentID'];
-    $studentNumber = $row['StudentNumber'];
-    $studentName = $row['Name'];
-    $title = $row['Title'];
-
-    echo "<p><strong>Student Found:</strong></p><ul>";
-    echo "<li><strong>StudentID:</strong> $studentID</li>";
-    echo "<li><strong>StudentNumber:</strong> $studentNumber</li>";
-    echo "<li><strong>Name:</strong> $studentName</li>";
-    echo "<li><strong>Title:</strong> $title</li>";
-    echo "</ul>";
-} else {
-    echo "<p>No student found with ID 5.</p>";
-}
-
-$conn->close();
-?>
-
-<!-- HTML FORM STARTS HERE -->
-<?php
-// Escape the value for safety
-$escapedName = htmlspecialchars($studentName);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -149,18 +101,6 @@ $escapedName = htmlspecialchars($studentName);
   <div id="formWrapper">
     <h1>Pembuatan Kartu Les Manual</h1>
 
-    <!-- Redirect Button to WA Template Creator page -->
-    <form action="/entrypoints/WATemplateCreator.php" method="get">
-      <button type="submit">WA Template Creator</button>
-    </form>
-    <!-- Redirect Button to New Entry Page -->
-    <form action="/entrypoints/entryform.php" method="get">
-      <button type="submit">Start New Entry</button>
-    </form>
-    <!-- New Database Viewer Button -->
-    <form action="/db_viewer.php" method="get">
-      <button type="submit">🗄️ Database Viewer</button>
-    </form>
         <!-- Navigation to Test Version -->
     <form action="index_test.php" method="get">
       <button type="submit">📋 Test Version</button>
@@ -170,7 +110,7 @@ $escapedName = htmlspecialchars($studentName);
 
     <div class="form-grid" id="studentDataInputs">
       <label for="name">Nama Siswa</label>
-      <input id="name" class="student-data short" data-key="Name" value="<?= $escapedName ?>">
+      <input id="name" class="student-data short" data-key="Name" value="">
 
       <label for="dauer">Dauer</label>
       <select id="dauer" class="student-data short" data-key="Dauer">
@@ -427,7 +367,7 @@ function generateHtml() {
         alert("Error during rendering: " + error.message);
       });
 
-      const DEBUG = true;
+      const DEBUG = false; // Set to true to enable HTML download
       if (DEBUG) {
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);

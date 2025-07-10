@@ -86,6 +86,26 @@ require_once '../config/db.php'; // database connection
       color: #6c757d;
       font-size: 0.9em;
     }
+        #studentsTable td:last-child {
+      font-weight: bold;
+      color: #6c757d;
+      font-size: 0.9em;
+    }
+    
+    /* Delete button styling */
+    #deleteStudentBtn:disabled {
+      background: #6c757d !important;
+      cursor: not-allowed !important;
+    }
+    
+    #deleteStudentBtn:hover:not(:disabled) {
+      background: #c82333 !important;
+    }
+    
+    #deleteStudentBtn:active:not(:disabled) {
+      background: #bd2130 !important;
+    }
+  </style>
   </style>
 </head>
 <body>
@@ -152,7 +172,18 @@ require_once '../config/db.php'; // database connection
         include '../assets/components/DropdownBox_StudentExtended.php';
       ?>
     </div>
-    
+
+        <!-- Delete Student Section -->
+    <div class="form-section" style="margin-top: 20px; padding: 15px; border: 2px solid #dc3545; border-radius: 8px; background: #f8d7da;">
+      <button id="deleteStudentBtn" disabled style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">
+        🗑️ Delete Student
+      </button>
+      <div style="margin-top: 8px; color: #721c24; font-weight: bold; font-size: 0.9em;">
+        AWAS! Just for testing!
+      </div>
+      <div id="deleteStatus" style="margin-top: 10px; font-weight: bold;"></div>
+    </div>
+
     <!-- Students Data Table -->
     <div class="form-section" style="margin-top: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -192,6 +223,7 @@ require_once '../config/db.php'; // database connection
   let availableLevels = [];
   let allStudents = [];
   let selectedStudentForHighlight = '';
+  let selectedStudentForDeletion = null; // Store selected student for deletion
   
   // Initialize the universal data fetcher
   class DataFetcher {
@@ -418,6 +450,95 @@ require_once '../config/db.php'; // database connection
   }
 
   // ==========================================
+  // DELETE STUDENT FUNCTIONALITY
+  // ==========================================
+
+  // Handle student deletion with safety warnings
+  async function deleteSelectedStudent() {
+    if (!selectedStudentForDeletion) {
+      alert('No student selected for deletion!');
+      return;
+    }
+    
+    const student = selectedStudentForDeletion;
+    const deleteStatus = document.getElementById('deleteStatus');
+    
+    // First warning dialog
+    const firstWarning = confirm(
+      `Careful! You are about to delete a student from the Database.\n\n` +
+      `Student: ${student.Name} (ID: ${student.StudentID})\n\n` +
+      `Make sure it is only a Test-Student, not a real one.\n\n` +
+      `Click OK to continue or Cancel to abort.`
+    );
+    
+    if (!firstWarning) {
+      deleteStatus.innerHTML = '<span style="color: #6c757d;">Deletion cancelled by user.</span>';
+      setTimeout(() => deleteStatus.innerHTML = '', 3000);
+      return;
+    }
+    
+    // Second confirmation dialog
+    const secondConfirmation = confirm(
+      `FINAL CONFIRMATION\n\n` +
+      `Are you absolutely sure you want to delete:\n` +
+      `${student.Name} (ID: ${student.StudentID})?\n\n` +
+      `This action CANNOT be undone!\n\n` +
+      `Click OK to DELETE or Cancel to abort.`
+    );
+    
+    if (!secondConfirmation) {
+      deleteStatus.innerHTML = '<span style="color: #6c757d;">Deletion cancelled by user.</span>';
+      setTimeout(() => deleteStatus.innerHTML = '', 3000);
+      return;
+    }
+    
+    // Proceed with deletion
+    const deleteBtn = document.getElementById('deleteStudentBtn');
+    deleteBtn.disabled = true;
+    deleteStatus.innerHTML = '<span style="color: #dc3545;">Deleting student...</span>';
+    
+    try {
+      console.log('Attempting to delete student:', student.StudentID, student.Name);
+      
+      const deleteResult = await dataFetcher.executeQuery({
+        type: 'simple',
+        sql: 'DELETE FROM students WHERE StudentID = ?',
+        params: [student.StudentID]
+      });
+      
+      console.log('Delete result:', deleteResult);
+      
+      // Success!
+      deleteStatus.innerHTML = '<span style="color: #28a745;">✅ Student successfully deleted!</span>';
+      
+      // Clear selection and refresh data
+      selectedStudentForDeletion = null;
+      selectedStudentForHighlight = '';
+      
+      // Remove from existing students list
+      existingStudents = existingStudents.filter(name => 
+        name !== student.Name.toLowerCase()
+      );
+      
+      // Clear the search input
+      const searchInput = document.getElementById('viewerStudentInput');
+      if (searchInput) searchInput.value = '';
+      
+      // Refresh the table
+      loadStudentsTable();
+      
+      setTimeout(() => {
+        deleteStatus.innerHTML = '';
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      deleteStatus.innerHTML = '<span style="color: #dc3545;">❌ Error deleting student: ' + error.message + '</span>';
+      deleteBtn.disabled = false;
+    }
+  }
+
+  // ==========================================
   // TABLE FUNCTIONALITY (simplified)
   // ==========================================
 
@@ -434,6 +555,11 @@ require_once '../config/db.php'; // database connection
     
     if (!studentName) {
       console.log('No student name provided, clearing highlights');
+      
+      // Disable delete button when no student is selected
+      selectedStudentForDeletion = null;
+      document.getElementById('deleteStudentBtn').disabled = true;
+      
       return;
     }
     
@@ -460,6 +586,11 @@ require_once '../config/db.php'; // database connection
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       
       console.log('Successfully highlighted student:', studentName, 'ID:', student.StudentID);
+      
+      // Enable delete button and store selected student
+      selectedStudentForDeletion = student;
+      document.getElementById('deleteStudentBtn').disabled = false;
+      
     } else {
       console.log('Table row not found for StudentID:', student.StudentID);
     }
@@ -534,6 +665,8 @@ require_once '../config/db.php'; // database connection
           highlightStudent(selectedStudentForHighlight, student);
         }
       }
+      // Setup real-time search after table is loaded
+      setupRealTimeSearch();
       
     } catch (error) {
       console.error('Error loading students table:', error);
@@ -542,15 +675,81 @@ require_once '../config/db.php'; // database connection
     }
   }
   
+
+  // Real-time search and highlight function
+function setupRealTimeSearch() {
+  const searchInput = document.getElementById('viewerStudentInput');
+  
+  if (!searchInput) {
+    console.log('Search input not found, retrying in 1 second...');
+    setTimeout(setupRealTimeSearch, 1000);
+    return;
+  }
+  
+  console.log('Setting up real-time search on input:', searchInput.id);
+  
+  searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.trim().toLowerCase();
+    
+    if (searchTerm === '') {
+      // Clear highlighting when input is empty
+      highlightStudent('');
+      return;
+    }
+    
+    // Find closest matching student
+    const closestMatch = findClosestMatch(searchTerm);
+    
+    if (closestMatch) {
+      console.log('Auto-highlighting closest match:', closestMatch.Name);
+      highlightStudent(closestMatch.Name, closestMatch);
+    }
+  });
+}
+
+// Find the closest matching student name
+function findClosestMatch(searchTerm) {
+  if (!allStudents || allStudents.length === 0) {
+    console.log('No students data available for matching');
+    return null;
+  }
+  
+  const lowerSearchTerm = searchTerm.toLowerCase();
+  
+  // Priority 1: Exact match from start of name
+  let startsWith = allStudents.find(student => 
+    student.Name.toLowerCase().startsWith(lowerSearchTerm)
+  );
+  
+  if (startsWith) return startsWith;
+  
+  // Priority 2: Contains the search term
+  let contains = allStudents.find(student => 
+    student.Name.toLowerCase().includes(lowerSearchTerm)
+  );
+  
+  if (contains) return contains;
+  
+  // Priority 3: Fuzzy match (any words that start with search term)
+  let fuzzyMatch = allStudents.find(student => {
+    const words = student.Name.toLowerCase().split(' ');
+    return words.some(word => word.startsWith(lowerSearchTerm));
+  });
+  
+  return fuzzyMatch || null;
+}
+
+
   // Refresh table button
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refreshTableBtn').addEventListener('click', () => {
       loadStudentsTable();
     });
     
-    // Just load the table - dropdown is auto-configured
+    // Load table and setup real-time search
     setTimeout(() => {
       loadStudentsTable();
+      setupRealTimeSearch();
     }, 500);
   });
 </script>
