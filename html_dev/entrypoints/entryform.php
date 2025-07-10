@@ -10,6 +10,7 @@ require_once '../config/db.php'; // database connection
   <link rel="stylesheet" href="../assets/entryform.css">
   <link rel="stylesheet" href="../assets/dropdownbox.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="../services/StudentService.js"></script>
   <style>
     .form-section {
       margin: 15px 0;
@@ -110,13 +111,16 @@ require_once '../config/db.php'; // database connection
 </head>
 <body>
 
-  <h1>Tambahkan Murid Baru</h1>
-  <p>Harus ngisi semua untuk bisa pencet tombol</p>
+  <h2>Tambahkan Murid Baru</h2> 
+  <label>Harus ngisi semua untuk bisa pencet tombol</label>
 
-  <br>
+
+    <form action="../index.php" style="margin-bottom: 15px; margin-top: 15px;" method="get">
+    <button type="submit">Back to Home</button>
+    </form>
 
 <!-- Two-column layout container (50:50) -->
-<div style="display: flex; gap: 20px; margin-top: 30px; align-items: flex-start; min-height: 600px;">
+<div style="display: flex; gap: 20px; margin-top: 5px; align-items: flex-start; min-height: 600px;">
   
   <!-- Left column: New Student Form (50%) -->
   <div style="flex: 1; min-width: 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
@@ -126,10 +130,9 @@ require_once '../config/db.php'; // database connection
     <div class="form-section">
       <label for="titleSelect">Title:</label>
       <select id="titleSelect" name="title">
-        <option value="">Select Title...</option>
+        <option value="none">None</option>
         <option value="Herr">Herr</option>
         <option value="Frau">Frau</option>
-        <option value="none">None</option>
       </select>
     </div>
 
@@ -157,7 +160,11 @@ require_once '../config/db.php'; // database connection
   <div style="flex: 1; min-width: 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
     <h3>Student Database Viewer</h3>
     
-    <!-- Student Picker Section - Using Extended Dropdown -->
+<!-- Student Picker and Delete Section - Side by Side Layout -->
+<div style="display: flex; gap: 15px; align-items: flex-start; margin-bottom: 20px;">
+  
+  <!-- Left: Student Picker (60% width) -->
+  <div style="flex: 1; min-width: 200px;">
     <div class="form-section">
       <?php
         $inputId = 'viewerStudentInput';
@@ -172,23 +179,28 @@ require_once '../config/db.php'; // database connection
         include '../assets/components/DropdownBox_StudentExtended.php';
       ?>
     </div>
-
-        <!-- Delete Student Section -->
-    <div class="form-section" style="margin-top: 20px; padding: 15px; border: 2px solid #dc3545; border-radius: 8px; background: #f8d7da;">
-      <button id="deleteStudentBtn" disabled style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">
+  </div>
+  
+  <!-- Right: Delete Student Section (40% width) -->
+  <div style="flex: 0 0 auto; min-width: 200px;">
+    <div class="form-section" style="margin-top: 0; padding: 15px; border: 2px solid #dc3545; border-radius: 8px; background: #f8d7da;">
+      <button id="deleteStudentBtn" disabled style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%;">
         🗑️ Delete Student
       </button>
-      <div style="margin-top: 8px; color: #721c24; font-weight: bold; font-size: 0.9em;">
+      <div style="margin-top: 8px; color: #721c24; font-weight: bold; font-size: 0.9em; text-align: center;">
         AWAS! Just for testing!
       </div>
       <div id="deleteStatus" style="margin-top: 10px; font-weight: bold;"></div>
     </div>
+  </div>
+  
+</div>
 
     <!-- Students Data Table -->
     <div class="form-section" style="margin-top: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h4>All Students</h4>
-        <button id="refreshTableBtn" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">🔄 Refresh</button>
+        <!-- <button id="refreshTableBtn" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">🔄 Refresh</button> -->
       </div>
       
       <div id="studentsTableContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
@@ -270,28 +282,19 @@ require_once '../config/db.php'; // database connection
     }
   }
   const dataFetcher = new DataFetcher();
+  const studentService = new StudentService(dataFetcher);
 
   // Load existing students and levels when page loads
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      // Load existing student names
-      const studentResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'SELECT Name FROM students',
-        return_type: 'array'
-      });
-      
-      existingStudents = studentResult.map(row => row.Name.toLowerCase());
+      // Load existing student names - now one clean method call
+      const names = await studentService.getAllNames();
+      existingStudents = names.map(name => name.toLowerCase());
       console.log('Loaded existing students:', existingStudents);
 
-      // Load available levels
-      const levelResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'SELECT Level FROM levels',
-        return_type: 'array'
-      });
-      
-      availableLevels = levelResult;
+      // Load available levels - clean and organized
+      const levels = await studentService.getAllLevels();
+      availableLevels = levels;
       populateLevelDropdown(availableLevels);
       console.log('Loaded levels:', availableLevels);
 
@@ -362,73 +365,32 @@ require_once '../config/db.php'; // database connection
     status.innerHTML = '<span style="color: blue;">Adding student...</span>';
     
     try {
-      const name = document.getElementById('newStudentName').value.trim();
-      const title = document.getElementById('titleSelect').value;
-      const level = document.getElementById('levelSelect').value;
-      
-      // Step 1: Get next StudentNumber and StudentID
-      console.log('Getting next StudentNumber...');
-      const numberResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'SELECT MAX(StudentNumber)+1 as NextNumber FROM students',
-        return_type: 'single'
-      });
-      console.log('Number result:', numberResult);
-      
-      console.log('Getting next StudentID...');
-      const idResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'SELECT MAX(StudentID)+1 as NextID FROM students',
-        return_type: 'single'
-      });
-      console.log('ID result:', idResult);
-      
-      const studentNumber = numberResult.NextNumber || 1;
-      const studentID = idResult.NextID || 1;
-      
-      console.log('Final values - StudentNumber:', studentNumber, 'StudentID:', studentID);
-      console.log('Insertion values - Name:', name, 'Title:', title, 'TitleValue:', title === 'none' ? null : title);
-      
-      // Step 2: Insert new student
-      const titleValue = title === 'none' ? null : title;
-      
-      console.log('Attempting to insert student with params:', [studentID, studentNumber, name, titleValue]);
-      
-      const insertResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'INSERT INTO students (StudentID, StudentNumber, Name, Title) VALUES (?, ?, ?, ?)',
-        params: [studentID, studentNumber, name, titleValue]
-      });
-      
-      console.log('Insert result:', insertResult);
-      
-      status.innerHTML = '<span style="color: blue;">Student inserted, updating level...</span>';
-      
-      // Step 3: Wait briefly, then update level
-      setTimeout(async () => {
-        try {
-          await dataFetcher.executeQuery({
-            type: 'simple',
-            sql: 'UPDATE studydetails SET Level = ? WHERE StudentID = ?',
-            params: [level, studentID]
-          });
-          
-          // Success!
-          status.innerHTML = '<span style="color: green;">✅ Student successfully added!</span>';
-          
-          // Add to existing students list and clear form
-          existingStudents.push(name.toLowerCase());
-          clearForm();
-          
-          setTimeout(() => {
-            status.innerHTML = '';
-          }, 3000);
-          
-        } catch (error) {
-          console.error('Error updating level:', error);
-          status.innerHTML = '<span style="color: orange;">⚠️ Student added but level update failed</span>';
-        }
-      }, 500);
+    const name = document.getElementById('newStudentName').value.trim();
+    const title = document.getElementById('titleSelect').value;
+    const level = document.getElementById('levelSelect').value;
+    
+    // One clean method call handles all the complexity
+    const newStudent = await studentService.createStudent({
+      name: name,
+      title: title,
+      level: level
+    });
+    
+    console.log('Student created:', newStudent);
+    
+    // Success!
+    status.innerHTML = '<span style="color: green;">✅ Student successfully added!</span>';
+    
+    // Add to existing students list and clear form
+    existingStudents.push(name.toLowerCase());
+
+    await refreshDropdownData();
+
+    clearForm();
+    
+    setTimeout(() => {
+      status.innerHTML = '';
+    }, 3000);
       
     } catch (error) {
       console.error('Error adding student:', error);
@@ -500,14 +462,9 @@ require_once '../config/db.php'; // database connection
     try {
       console.log('Attempting to delete student:', student.StudentID, student.Name);
       
-      const deleteResult = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'DELETE FROM students WHERE StudentID = ?',
-        params: [student.StudentID]
-      });
-      
-      console.log('Delete result:', deleteResult);
-      
+      // One clean method call for deletion
+      await studentService.deleteStudent(student.StudentID);
+            
       // Success!
       deleteStatus.innerHTML = '<span style="color: #28a745;">✅ Student successfully deleted!</span>';
       
@@ -520,6 +477,8 @@ require_once '../config/db.php'; // database connection
         name !== student.Name.toLowerCase()
       );
       
+      await refreshDropdownData();
+
       // Clear the search input
       const searchInput = document.getElementById('viewerStudentInput');
       if (searchInput) searchInput.value = '';
@@ -604,13 +563,10 @@ require_once '../config/db.php'; // database connection
     try {
       tableStatus.textContent = 'Loading students...';
       
-      const students = await dataFetcher.executeQuery({
-        type: 'simple',
-        sql: 'SELECT StudentID, StudentNumber, Name, Title FROM students ORDER BY StudentID DESC',
-        return_type: 'multiple'
-      });
+      // One clean method call
+      const students = await studentService.getAllForTable();
       
-            // Make students data globally available
+      // Make students data globally available
       allStudents = students;
       window.allStudents = students; // Also available to dropdown system
       
@@ -707,44 +663,51 @@ function setupRealTimeSearch() {
   });
 }
 
-// Find the closest matching student name
-function findClosestMatch(searchTerm) {
-  if (!allStudents || allStudents.length === 0) {
-    console.log('No students data available for matching');
-    return null;
+  // Refresh dropdown data after student changes
+  async function refreshDropdownData() {
+    try {
+      console.log('Refreshing dropdown data...');
+      
+      // Get fresh student names from database
+      const freshNames = await studentService.getAllNames();
+      
+      // Update the global existingStudents array
+      existingStudents = freshNames.map(name => name.toLowerCase());
+      
+      // Update the global allStudents array used by dropdown
+      window.allStudents = await studentService.getAllForTable();
+      
+      // Trigger dropdown refresh if the dropdown system supports it
+      if (window.refreshDropdownData && typeof window.refreshDropdownData === 'function') {
+        window.refreshDropdownData(freshNames);
+      }
+      
+      // Alternative: Trigger a custom event that the dropdown can listen to
+      window.dispatchEvent(new CustomEvent('studentsUpdated', {
+        detail: { students: freshNames }
+      }));
+      
+      console.log('Dropdown data refreshed successfully');
+      
+    } catch (error) {
+      console.error('Error refreshing dropdown data:', error);
+    }
   }
-  
-  const lowerSearchTerm = searchTerm.toLowerCase();
-  
-  // Priority 1: Exact match from start of name
-  let startsWith = allStudents.find(student => 
-    student.Name.toLowerCase().startsWith(lowerSearchTerm)
-  );
-  
-  if (startsWith) return startsWith;
-  
-  // Priority 2: Contains the search term
-  let contains = allStudents.find(student => 
-    student.Name.toLowerCase().includes(lowerSearchTerm)
-  );
-  
-  if (contains) return contains;
-  
-  // Priority 3: Fuzzy match (any words that start with search term)
-  let fuzzyMatch = allStudents.find(student => {
-    const words = student.Name.toLowerCase().split(' ');
-    return words.some(word => word.startsWith(lowerSearchTerm));
-  });
-  
-  return fuzzyMatch || null;
+
+// Find the closest matching student name using StudentService
+function findClosestMatch(searchTerm) {
+  return studentService.findClosestMatch(searchTerm, allStudents);
 }
 
 
   // Refresh table button
   document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('refreshTableBtn').addEventListener('click', () => {
-      loadStudentsTable();
-    });
+    // document.getElementById('refreshTableBtn').addEventListener('click', () => {
+    //   loadStudentsTable();
+    // });
+
+    // ADD THIS: Setup delete button event listener
+    document.getElementById('deleteStudentBtn').addEventListener('click', deleteSelectedStudent);
     
     // Load table and setup real-time search
     setTimeout(() => {
