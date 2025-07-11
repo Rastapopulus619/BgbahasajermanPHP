@@ -63,6 +63,11 @@ if ($result && $row = $result->fetch_assoc()) {
       </div>
   </div>
 
+  <!-- Load required services -->
+  <script src="../assets/js/dataFetcher.js"></script>
+  <script src="../services/StudentService.js"></script>
+  <script src="../services/TemplateService.js"></script>
+
   <!-- Include the dropdown box script -->
   <script type="module">
     import { setupDropdown } from '/assets/js/modularDropdownBox.js';
@@ -76,7 +81,7 @@ if ($result && $row = $result->fetch_assoc()) {
       fetchUrl: '../handlers/fetchStudentList.php',
       minChars: 1,
         onSelect: (selectedValue) => {
-          const nameField = document.getElementById('input_NAME');
+          const nameField = document.getElementById('input_STUDENTNAME');
           if (nameField) {
             nameField.value = selectedValue;
             // 🔥 Trigger the input event so the listener updates the template text
@@ -106,8 +111,11 @@ if ($result && $row = $result->fetch_assoc()) {
     // UNIVERSAL DATA FETCHING SYSTEM
     // ==========================================
     
+    // REPLACE the existing fetchTemplateData function with this:
+
     /**
-     * Fetch template-specific data using the new universal data fetcher
+     * Fetch template-specific data using the new TemplateService
+     * Falls back to universal fetcher if no specific method exists
      * 
      * @param {string} templateKey - The template identifier
      * @param {string} studentName - The selected student name
@@ -115,44 +123,30 @@ if ($result && $row = $result->fetch_assoc()) {
      */
     async function fetchTemplateData(templateKey, studentName) {
       try {
-        const queryConfig = {
-          type: 'complex',
-          handler: 'getTemplateAutoFetchData',
-          params: {
-            template_key: templateKey,
-            student_name: studentName
-          }
-        };
+        console.log(`🔍 Fetching template data for: ${templateKey}, student: ${studentName}`);
         
-        const response = await fetch('../handlers/dataFetcher.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: queryConfig })
-        });
+        // Use the new template service (this will check for specific methods first)
+        const templateData = await templateService.getTemplateData(templateKey, studentName);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Unknown error');
-        }
-        
-        return result.data || {};
+        console.log('📋 Template data received:', templateData);
+        return templateData;
         
       } catch (error) {
-        console.error('Universal data fetch failed:', error);
-        throw error;
+        console.error('❌ Template data fetch failed:', error);
+        // Fallback to universal system
+        return await templateService.universalTemplateFetch(templateKey, studentName);
       }
     }
 
     // Load templates on page load
     loadTemplateOptions();
 
+    // 🚀 Initialize the new services
+    const dataFetcher = new DataFetcher({ debug: true });
+    const studentService = new StudentService(dataFetcher);
+    const templateService = new TemplateService(studentService, dataFetcher);
+
+    console.log('✅ Services initialized successfully');
   </script>
   
   <!-- Script to handle template text generation and manual input fields -->
@@ -188,17 +182,24 @@ if ($result && $row = $result->fetch_assoc()) {
         input.addEventListener('input', () => {
           currentValues[ph] = input.value;
 
-          // Rebuild text from original template
+          // 🎨 Rebuild with SMART placeholder display
           let rebuilt = originalTemplate;
 
           keys.forEach(k => {
             const val = currentValues[k] || "";
             const regex = new RegExp(`\\[${k}\\]`, "g");
-            rebuilt = rebuilt.replace(regex, `[${val}]`);
+            
+            if (val.trim() !== '') {
+              // Show user input: [UserInput]
+              rebuilt = rebuilt.replace(regex, `[${val}]`);
+            } else {
+              // Show descriptive placeholder: [PLACEHOLDER_NAME]
+              rebuilt = rebuilt.replace(regex, `[${k}]`);
+            }
           });
 
           textArea.value = rebuilt;
-          lastValue = rebuilt; // sync for bracket protection
+          lastValue = rebuilt;
         });
 
         manualInputsContainer.appendChild(label);
@@ -224,53 +225,74 @@ if ($result && $row = $result->fetch_assoc()) {
           return;
         }
 
-        // Initial message
-        originalTemplate = result.text; // this has [NAME] etc. still intact
-        let text = result.text; // now you work with this to do partial replacements
-        const placeholders = result.placeholders;
+    // Initial message
+    originalTemplate = result.text; // Keep original with [NAME], [DATE] etc.
+    let text = result.text; // Working copy for display
+    const placeholders = result.placeholders;
 
-        // If student name is selected, inject it
-        const studentName = studentInput.value.trim();
-        if (studentName && placeholders["NAME"]) {
-          text = text.replaceAll("[NAME]", `[${studentName}]`);
-          placeholders["NAME"] = studentName;
-        }
+    // Get student name but DON'T replace in text yet
+    const studentName = studentInput.value.trim();
 
-        // Use universal data fetcher for auto-filling all placeholders
-        if (studentName) {
-          try {
-            const autoFetchData = await fetchTemplateData(templateKey, studentName);
-            
-            // Apply auto-fetched data to placeholders
-            Object.keys(autoFetchData).forEach(key => {
-              const value = autoFetchData[key];
-              if (value && text.includes(`[${key}]`)) {
-                text = text.replaceAll(`[${key}]`, `[${value}]`);
-                placeholders[key] = value;
-              }
-            });
-          } catch (error) {
-            console.error("Error auto-fetching template data:", error);
-            // Fallback to old method for NUMBER only
-            if (text.includes("[NUMBER]")) {
-              try {
-                const detailRes = await fetch(`../handlers/fetchStudentDetails.php?name=${encodeURIComponent(studentName)}`);
-                const detail = await detailRes.json();
-                if (detail.StudentNumber) {
-                  text = text.replaceAll("[NUMBER]", `[${detail.StudentNumber}]`);
-                  placeholders["NUMBER"] = detail.StudentNumber;
-                }
-              } catch (fallbackError) {
-                console.error("Fallback fetch also failed:", fallbackError);
-              }
-            }
+    // 🎯 Use template service for intelligent auto-filling
+    if (studentName) {
+      try {
+        const autoFetchData = await fetchTemplateData(templateKey, studentName);
+        
+        console.log('📊 Auto-fetched data:', autoFetchData);
+        
+        // Store the auto-fetched values in placeholders object
+        // but DON'T replace them in the text yet
+        Object.keys(autoFetchData).forEach(key => {
+          const value = autoFetchData[key];
+          if (value !== undefined && value !== null && value !== '') {
+            placeholders[key] = value; // Store for later use
+            console.log(`✅ Auto-filled ${key}: ${value}`);
           }
+        });
+        
+        // 📋 Show summary of what was auto-filled vs manual
+        const autoFilledKeys = Object.keys(autoFetchData).filter(key => 
+          autoFetchData[key] !== undefined && autoFetchData[key] !== null && autoFetchData[key] !== ''
+        );
+        
+        const manualKeys = Object.keys(placeholders).filter(key => 
+          !autoFilledKeys.includes(key)
+        );
+        
+        if (autoFilledKeys.length > 0) {
+          console.log(`🤖 Auto-filled placeholders: ${autoFilledKeys.join(', ')}`);
         }
         
-        originalTemplate = text;
-        textArea.value = text;
-        lastValue = text; // for bracket protection
-        generateInputFields(Object.keys(placeholders), placeholders);
+        if (manualKeys.length > 0) {
+          console.log(`✏️ Manual placeholders: ${manualKeys.join(', ')}`);
+        }
+        
+      } catch (error) {
+        console.error("❌ Error auto-fetching template data:", error);
+        // Fallback logic can go here if needed
+      }
+    }
+
+    // 🎨 Create SMART VISUAL preview with dynamic placeholder display
+    // Shows filled values OR descriptive placeholders when empty
+    let displayText = originalTemplate;
+    Object.keys(placeholders).forEach(key => {
+      const value = placeholders[key];
+      
+      if (value && value.trim() !== '') {
+        // Show the filled value: [StudentName] or [11.07.2025]
+        displayText = displayText.replaceAll(`[${key}]`, `[${value}]`);
+      } else {
+        // Keep the descriptive placeholder: [STUDENTNAME] or [DATE]
+        // This way user always sees what should go where
+        displayText = displayText.replaceAll(`[${key}]`, `[${key}]`);
+      }
+    });
+
+    // Update the textarea with the VISUAL preview
+    textArea.value = displayText;
+    lastValue = displayText; // for bracket protection
+    generateInputFields(Object.keys(placeholders), placeholders);
 
       } catch (err) {
         console.error("Error generating template:", err);
